@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net5.0</TargetFramework>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="scripts\Database.fsx" />
+    <None Include="scripts\ClosedXML.fsx" />
+    <None Include="Observations.fsx" />
+    <Compile Include="Types.fs" />
+    <Compile Include="Signal.fs" />
+    <Compile Include="Observation.fs" />
+    <Compile Include="DataSet.fs" />
+    <Compile Include="Convert.fs" />
+    <Compile Include="Collapse.fs" />
+  </ItemGroup>
+
+  <ItemGroup />
+
+</Project>
