@@ -1,8 +1,10 @@
 ﻿namespace Informedica.Observations.Lib
 
+
 module Collapse =
 
     open Types
+
 
     let toFirst : Collapse =
         fun signals ->

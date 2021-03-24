@@ -6,13 +6,14 @@ module Signal =
     open Types
 
 
-    let create id name value patId datetime =
+    let create id name value valid patId ts =
         {
             Id = id 
             Name = name
             Value = value
+            Validated = valid
             PatientId = patId
-            DateTime = datetime
+            TimeStamp = ts
         }
 
     let createWithId id = create (id |> Some)
@@ -42,6 +43,9 @@ module Signal =
         | None    -> false
 
 
+    let isValid (signal : Signal) = signal.Validated
+
+
     let getNumericValue (signal : Signal) =
         match signal.Value with
         | Numeric x -> x |> Some
@@ -57,30 +61,32 @@ module Signal =
 
 
     let dateTimeIsSome (signal : Signal) =
-        match signal.DateTime with
+        match signal.TimeStamp with
         | SomeDateTime _ -> true
         | _              -> false
 
+
     let dateTimeIsPeriod (signal : Signal) =
-        match signal.DateTime with
+        match signal.TimeStamp with
         | Period _ -> true
         | _              -> false
 
 
     let periodToDateTime (signal : Signal) =
-        match signal.DateTime with
+        match signal.TimeStamp with
         | Period (start, stop) ->
             [0. .. (stop - start).TotalMinutes ]
             |> List.map (fun min ->
                 {
                     signal with
-                        DateTime = start.AddMinutes(min) |> SomeDateTime
+                        TimeStamp = start.AddMinutes(min) |> SomeDateTime
                 }
             )
         | _ -> [ signal ]
 
+
     let getDateTimeValue (signal : Signal) =
-        match signal.DateTime with
+        match signal.TimeStamp with
         | SomeDateTime dt -> dt
         | _ -> 
             $"Cannot get datetime from: {signal}"

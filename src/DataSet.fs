@@ -1,21 +1,23 @@
 ﻿namespace Informedica.Observations.Lib
 
+
 module DataSet =
 
     open System
-
-
     open Types
+
 
     let timeStampToString = function
         | Exact dt   -> dt.ToString("dd-MM-yyyy HH:mm")
         | Relative i -> i |> string
+
 
     let empty = 
         { 
             Columns = []
             Data = []
         }
+
 
     let get : Transform =
         fun observations signals ->
@@ -33,7 +35,6 @@ module DataSet =
                 ]
 
             signals 
-            |> List.sortBy (fun signal -> signal.PatientId)
             // get all signals per patient
             |> List.groupBy (fun signal -> signal.PatientId)
             // split date time dependent and independent
@@ -71,8 +72,11 @@ module DataSet =
                                         let source = 
                                             obs.Sources 
                                             |> List.find (Observation.signalBelongsToSource signal)
-                                        signal |> source.Convert
+                                        
+                                        signal 
+                                        |> (source.Conversions |> List.fold (>>) id)
                                     )
+                                    |> (obs.Filters |> List.fold (>>) id)
                                     // collapse to a single value
                                     |> obs.Collapse
                             ]
@@ -97,8 +101,10 @@ module DataSet =
                     |> List.map (fun (_, dt, r) -> 
                         match fstDate, dt with
                         | Relative _, _ 
-                        | _, Relative _ -> (id, dt, r)
-                        | Exact fdt, Exact sdt  -> (id, (sdt - fdt).TotalMinutes |> int |> Relative, r) 
+                        | _, Relative _ -> 
+                            (id, dt, r)
+                        | Exact fdt, Exact sdt  -> 
+                            (id, (sdt - fdt).TotalMinutes |> int |> Relative, r) 
                     )
                 {
                     ds with

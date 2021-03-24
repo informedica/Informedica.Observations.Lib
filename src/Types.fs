@@ -1,5 +1,6 @@
 ﻿namespace Informedica.Observations.Lib
 
+
 module Types =
 
     open System
@@ -16,7 +17,7 @@ module Types =
         | DateTime of DateTime
 
 
-    type DateTimeOption = 
+    type TimeStamp = 
         | SomeDateTime of DateTime
         | Period of start : DateTime * stop : DateTime
         | NoDateTime
@@ -27,8 +28,9 @@ module Types =
             Id: SignalId
             Name : string
             Value : Value
+            Validated : bool
             PatientId : string
-            DateTime : DateTimeOption
+            TimeStamp : TimeStamp
         }
 
 
@@ -38,6 +40,10 @@ module Types =
 
     /// A conversion function for a value
     type Convert = Signal -> Signal
+
+
+    type Filter = Signal list -> Signal list
+
 
     /// An observation describes wich signals to
     /// that describe that observation (Sources)
@@ -51,13 +57,14 @@ module Types =
             Type : string
             Length : int option
             Sources : Source list
+            Filters : Filter list
             Collapse : Collapse 
         }
     and Source =
         { 
             Id : int
             Name : string
-            Convert : Convert 
+            Conversions : Convert list
         }
 
 
@@ -67,21 +74,16 @@ module Types =
     /// unique hospital number, date time.
     type DataSet =
         { Columns : Column list
-          Data : (PatientId * TimeStamp * DataRow) list }
+          Data : (PatientId * RowTime * DataRow) list }
     and Column = 
         { 
             Name: string
             Type: string
         }
     and DataRow = Value list
-    and TimeStamp = | Exact of DateTime | Relative of int 
+    and RowTime = | Exact of DateTime | Relative of int 
 
 
     type Transform = Observation list ->  Signal list -> DataSet
 
 
-    type Conversions =
-        | Engstrom
-        | ServoU
-        | VentMachine
-        | TempMode

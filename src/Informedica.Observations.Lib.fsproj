@@ -8,15 +8,22 @@
   <ItemGroup>
     <None Include="scripts\Database.fsx" />
     <None Include="scripts\ClosedXML.fsx" />
-    <None Include="Observations.fsx" />
+    <None Include="scripts\Observations.fsx" />
+    <Compile Include="Database.fs" />
+    <Compile Include="ClosedXML.fs" />
     <Compile Include="Types.fs" />
     <Compile Include="Signal.fs" />
     <Compile Include="Observation.fs" />
     <Compile Include="DataSet.fs" />
     <Compile Include="Convert.fs" />
+    <Compile Include="Filter.fs" />
     <Compile Include="Collapse.fs" />
   </ItemGroup>
 
-  <ItemGroup />
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.95.4" />
+    <PackageReference Include="Informedica.Utils.Lib" Version="1.0.1" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="2.1.2" />
+  </ItemGroup>
 
 </Project>

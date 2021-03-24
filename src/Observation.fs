@@ -6,21 +6,22 @@ module Observation =
     open Types
 
 
-    let create name type' length sources collapseFn =
+    let create name type' length sources filterFns collapseFn =
         {
             Name = name
             Type = type'
             Length = length
             Sources = sources
+            Filters = filterFns
             Collapse = collapseFn
         }
 
 
-    let createSource id name convertFn =
+    let createSource id name convertFns =
         {
             Id = id
             Name = name
-            Convert = convertFn
+            Conversions = convertFns
         }
 
 
@@ -32,6 +33,7 @@ module Observation =
                 |> List.map (fun (id, name, convertFn) -> createSource id name convertFn)
             create name type' length sources collapseFn
         )
+
 
     let signalBelongsToSource (signal : Signal) (source : Source) =
         if signal.Id.IsSome then signal.Id.Value = source.Id
