@@ -73,9 +73,11 @@
 # Add source files
 !/scripts/
 !/src/
+!/src/scripts/
 
 # Add test files
 !/tests/
+!/tests/scripts/
 
 # Add documentation tools 
 !/docsTool/
