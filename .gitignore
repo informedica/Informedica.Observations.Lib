@@ -91,4 +91,6 @@
 !/docs/
 !/docs/**
 
-
+# Add data map
+!/data/
+!/data/*.xlsx
