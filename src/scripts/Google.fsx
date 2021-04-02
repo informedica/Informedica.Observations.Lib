@@ -5,7 +5,9 @@
 #load "../Filter.fs"
 #load "../Collapse.fs"
 
+
 open Informedica.Observations.Lib
+
 
 
 module String =
@@ -316,11 +318,11 @@ module Convert =
     let map s =
         match s with
         | _ when s = "engstrom"    -> engstrom    |> Some
-        | _ when s = "servoi"      -> servoI      |> Some
-        | _ when s = "servou"      -> servoU      |> Some
+        | _ when s = "servo_i"      -> servoI      |> Some
+        | _ when s = "servo_u"      -> servoU      |> Some
         | _ when s = "carescape"   -> id          |> Some
-        | _ when s = "ventmachine" -> ventMachine |> Some
-        | _ when s = "tempmode"    -> tempMode    |> Some
+        | _ when s = "vent_machine" -> ventMachine |> Some
+        | _ when s = "temp_mode"    -> tempMode    |> Some
         | _ -> None
 
 
@@ -368,7 +370,7 @@ module Collapse =
 
     let map s : Collapse option =
         match s with
-        | _ when s = "concat(;)" -> 
+        | _ when s = "concat_;" -> 
             fun sgns -> 
                 sgns 
                 |> List.map Signal.valueToString
