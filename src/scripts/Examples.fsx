@@ -13,6 +13,7 @@
 #load "../Convert.fs"
 #load "../Filter.fs"
 #load "../Collapse.fs"
+#load "../Definitions.fs"
 
 
 open System
@@ -21,24 +22,15 @@ open Informedica.Observations.Lib
 
 fsi.AddPrinter<DateTime> (fun dt -> dt.ToString("dd-MM-yyyy HH:mm"))
 
+let path = Path.Combine(__SOURCE_DIRECTORY__, "../../data/Definitions.xlsx")
+File.Exists(path)
+
+let returnNone _ = None
 
 
 module Convert =
 
     open Types
-
-    let filterLowHigh low high : Convert = 
-        fun signal ->
-            let value =
-                signal
-                |> Signal.getNumericValue
-                |> Option.bind (fun value -> 
-                    if value < low || value > high then NoValue
-                    else value |> Numeric 
-                    |> Some
-                )
-                |> Option.defaultValue NoValue
-            { signal with Value = value }
 
 
     let setSignalText signal text =
@@ -105,6 +97,7 @@ module Convert =
             | _ -> ""
             |> setSignalText signal
 
+
     let engstrom : Convert = 
         fun signal -> 
             match signal |> Signal.valueToString with
@@ -120,16 +113,28 @@ module Convert =
             |> setSignalText signal
 
 
+    let map s =
+        match s with
+        | _ when s = "engstrom"    -> engstrom    |> Some
+        | _ when s = "servoi"      -> servoI      |> Some
+        | _ when s = "servou"      -> servoU      |> Some
+        | _ when s = "carescape"   -> id          |> Some
+        | _ when s = "ventmachine" -> ventMachine |> Some
+        | _ when s = "tempmode"    -> tempMode    |> Some
+        | _ -> None
+
+
+module Filter =
+
+    let map s =
+        match s with
+        | _ when s = "validated" -> Filter.onlyValid |> Some
+        | _ -> None
+
 
 module Collapse =
 
     open Types
-
-    let toFirst : Collapse =
-        fun signals ->
-            match signals |> List.tryHead with
-            | None -> NoValue
-            | Some signal -> signal.Value
 
 
     let sum : Collapse =
@@ -159,43 +164,16 @@ module Collapse =
                 |> Numeric 
             | _ -> NoValue
 
-
-
-module Definitions =
-
-    open Types
-    // Convert Fn
-    let tempMode = Convert.tempMode
-    let filterIbpMean = Convert.filterLowHigh 0. 300. 
-    let filterHr = Convert.filterLowHigh 0. 250.
-
-    let machine = Convert.ventMachine
-    let engstrom = Convert.engstrom
-    let servoI = Convert.servoI
-    let servoU = Convert.servoU
-
-    // Collapse Fn
-    let toFirst = Collapse.toFirst
-    let sum = Collapse.sum
-
-    let definitions =
-        //   name, type, collapse Fn, [list of (id, convert Fn)]
-        [ 
-            ("pat_gender", "varchar(10)", toFirst, [(5373, "", id)])
-            ("mon_hr", "float", toFirst, [(5473, "", filterHr); (10156, "", filterHr); (10157, "", filterHr)])
-            ("mon_ibp_mean", "float", toFirst, [(5461, "", filterIbpMean)])
-            ("mon_temp_mode", "varchar(50)", toFirst, [(5490, "", tempMode); (8025, "", tempMode); (14759, "", tempMode); (8601, "", tempMode)])
-            ("mon_temp", "float", toFirst, [(5490, "", id); (8025, "", id); (14759, "", id); (8601, "", id)])
-            ("obs_fb_urine", "float", sum, [(6863, "", id); (6862, "", id)] )
-            ("lab_bg_po2", "float", toFirst, [(4100, "", id); (4108, "", id)])
-            ("vent_s_fio2", "float",  toFirst, [(7345, "", id)])
-            ("vent_m_mean", "float",  toFirst, [(7348, "", id)])
-            ("cacl_oi", "float", Collapse.calcOxygenationIndex, [(7348, "", id); (7345, "", id); (4100, "", id)])
-            ("vent_machine", "varchar(100)",  toFirst, [(16254, "", machine);(7464, "", machine);(20059, "", machine)])
-            ("vent_mode", "float",  toFirst, [(16254, "", engstrom);(7464, "", servoI);(20059, "", servoU)])
-            ("med_sedation", "varchar(100)", toFirst, [(0, "midazolam", id); (0, "morfine", id)])
-        ]
-
+    let map s : Collapse option =
+        match s with
+        | _ when s = "concat(;)" -> 
+            fun sgns -> 
+                sgns 
+                |> List.map Signal.valueToString
+                |> String.concat ";"
+                |> Text
+            |> Some
+        | _ -> None
 
 
 open Types
@@ -215,44 +193,47 @@ let period start stop =
         |> failwith
 
 
+let createWithId = Signal.createWithIdValidated
+let createNoId = Signal.createNoIdValidated
+
+
 // signals 'raw data'
 [
     // patient 1
-    Signal.createWithId 5373 "gender" ("male" |> Text) "1" none
-    Signal.createWithId 5473 "heart rate" (120. |> Numeric) "1" now
-    Signal.createWithId 5461 "mean ibp" (60. |> Numeric) "1" now
-    Signal.createWithId 5473 "heart rate" (124. |> Numeric) "1" (now |> add 1)
+    createWithId 5373 "gender" ("male" |> Text) "1" none
+    createWithId 5473 "heart rate" (120. |> Numeric) "1" now
+    createWithId 5461 "mean ibp" (60. |> Numeric) "1" now
+    createWithId 5473 "heart rate" (124. |> Numeric) "1" (now |> add 1)
     // the temperature and the temp mode will be in the output
-    Signal.createWithId 5490 "temp rect" (37.8 |> Numeric) "1" (now |> add 1)
+    createWithId 5490 "temp rect" (37.8 |> Numeric) "1" (now |> add 1)
     // this valueWithId will be filtered out
-    Signal.createWithId 5473 "heart rate" (600. |> Numeric) "1" (now |> add 2)
-    Signal.createWithId 5473 "heart rate" (125. |> Numeric) "1" (now |> add 3)
-    Signal.createWithId 7348 "mean airway p" (12. |> Numeric) "1" (now |> add 1)
-    Signal.createWithId 7464 "servoI mode" ("21" |> Text) "1" (now |> add 1)
+    createWithId 5473 "heart rate" (600. |> Numeric) "1" (now |> add 2)
+    createWithId 5473 "heart rate" (125. |> Numeric) "1" (now |> add 3)
+    createWithId 7348 "mean airway p" (12. |> Numeric) "1" (now |> add 1)
+    createWithId 7464 "servoI mode" ("21" |> Text) "1" (now |> add 1)
     // medication that runs over a period signal
-    Signal.createNoId "midazolam" ("midazolam 0.1 mg/kg/h" |> Text) "1" (period now (now |> add 5))
+    createNoId "midazolam" ("midazolam 0.1 mg/kg/h" |> Text) "1" (period now (now |> add 5))
     // patient 2
-    Signal.createWithId 5373 "gender" ("female" |> Text) "2" none
-    Signal.createWithId 5473 "heart rate" (111. |> Numeric) "2" now
+    createWithId 5373 "gender" ("female" |> Text) "2" none
+    createWithId 5473 "heart rate" (111. |> Numeric) "2" now
     // this value will be filtered out
-    Signal.createWithId 5461 "mean ibp" (-100. |> Numeric) "2" now
+    createWithId 5461 "mean ibp" (-100. |> Numeric) "2" now
 
-    Signal.createWithId 5473 "heart rate" (103. |> Numeric) "2" (now |> add 1)
-    Signal.createWithId 5461 "mean ibp" (100. |> Numeric) "2" (now |> add 1)
+    createWithId 5473 "heart rate" (103. |> Numeric) "2" (now |> add 1)
+    createWithId 5461 "mean ibp" (100. |> Numeric) "2" (now |> add 1)
     // diuresis
-    Signal.createWithId 6862 "spont diuresis" (12. |> Numeric) "2" now
-    Signal.createWithId 6863 "cath diuresis" (15. |> Numeric) "2" now
-    Signal.createWithId 16254 "engstrom mode" ("c" |> Text) "2" (now |> add 1)
+    createWithId 6862 "spont diuresis" (12. |> Numeric) "2" now
+    createWithId 6863 "cath diuresis" (15. |> Numeric) "2" now
+    createWithId 16254 "engstrom mode" ("c" |> Text) "2" (now |> add 1)
     // the below 3 signals with the same date time will be collapsed to an OI
-    Signal.createWithId 7348 "mean airway p" (20. |> Numeric) "2" (now |> add 1)
-    Signal.createWithId 7345 "fio2" (0.6 |> Numeric) "2" (now |> add 1)
-    Signal.createWithId 4100 "po2" (56. |> Numeric) "2" (now |> add 1)
+    createWithId 7348 "mean airway p" (20. |> Numeric) "2" (now |> add 1)
+    createWithId 7345 "fio2" (0.6 |> Numeric) "2" (now |> add 1)
+    createWithId 4100 "po2" (56. |> Numeric) "2" (now |> add 1)
     // medication signal over a period
-    Signal.createNoId "morfine" ("morfine 10 mcg/kg/ur" |> Text) "2" (period now (now |> add 3))
+    createNoId "morfine" ("morfine 10 mcg/kg/ur" |> Text) "2" (period now (now |> add 3))
 ]
 // process the signals
-|> DataSet.get (Definitions.definitions 
-                |> Observation.mapToObservations)
+|> DataSet.get (Definitions.readXML path Convert.map Filter.map Collapse.map)
 |> DataSet.anonymize
 |> fun (ds, _) ->
     ds.Columns
@@ -280,4 +261,4 @@ let period start stop =
         )
         |> String.concat "\n"
         |> sprintf "%s\n%s" s
-    |> fun s -> File.WriteAllLines("observations.csv", [s])
+    |> fun s -> File.WriteAllLines("observations.csv", [s]) 

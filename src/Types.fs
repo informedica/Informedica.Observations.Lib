@@ -34,31 +34,21 @@ module Types =
         }
 
 
-    /// A function to summarize a list of values
-    /// as one value
     type Collapse = Signal list -> Value
 
-    /// A conversion function for a value
     type Convert = Signal -> Signal
-
 
     type Filter = Signal list -> Signal list
 
 
-    /// An observation describes wich signals to
-    /// that describe that observation (Sources)
-    /// along with a collaps function that summarizes
-    /// the obtained values to one value.
-    /// Each source value also can be converted to
-    /// a different or adjusted value.
     type Observation =
         { 
             Name : string 
             Type : string
             Length : int option
-            Sources : Source list
             Filters : Filter list
             Collapse : Collapse 
+            Sources : Source list
         }
     and Source =
         { 
@@ -68,10 +58,6 @@ module Types =
         }
 
 
-
-    /// The resulting dataset with colums
-    /// and rows of data. Each row has a
-    /// unique hospital number, date time.
     type DataSet =
         { Columns : Column list
           Data : (PatientId * RowTime * DataRow) list }

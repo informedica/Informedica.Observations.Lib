@@ -6,14 +6,14 @@ module Observation =
     open Types
 
 
-    let create name type' length sources filterFns collapseFn =
+    let create name type' length filterFns collapseFn sources =
         {
             Name = name
             Type = type'
             Length = length
-            Sources = sources
             Filters = filterFns
             Collapse = collapseFn
+            Sources = sources
         }
 
 
@@ -27,11 +27,11 @@ module Observation =
 
     let mapToObservations definitions =
         definitions 
-        |> List.map (fun (name, type', length, collapseFn, sources) ->
+        |> List.map (fun (name, type', length, filters, collapseFn, sources) ->
             let sources =
                 sources 
                 |> List.map (fun (id, name, convertFn) -> createSource id name convertFn)
-            create name type' length sources collapseFn
+            create name type' length filters collapseFn sources
         )
 
 

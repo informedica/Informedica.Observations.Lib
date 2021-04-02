@@ -9,7 +9,7 @@
     <None Include="build\.gitignore" />
     <None Include="scripts\Database.fsx" />
     <None Include="scripts\ClosedXML.fsx" />
-    <None Include="scripts\Observations.fsx" />
+    <None Include="scripts\Examples.fsx" />
     <Compile Include="Database.fs" />
     <Compile Include="ClosedXML.fs" />
     <Compile Include="Types.fs" />
