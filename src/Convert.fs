@@ -20,9 +20,11 @@ module Convert =
             { signal with Value = value }
 
 
-    let setSignalText signal text =
+    let setSignalText text signal =
         { signal with 
             Value = 
                 if text = "" then NoValue
                 else text |> Text
         }
+
+

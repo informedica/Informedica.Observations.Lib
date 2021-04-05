@@ -35,5 +35,15 @@ module Workbook =
             $"cannot find sheet with name: {sheetName}" |> printfn "%s"
             wb
 
+
     let getTable name (wb : XLWorkbook) =
         wb.Table(name)
+
+
+    let getCurrentRegion (sheetName : string) (wb : XLWorkbook) =
+        match wb.TryGetWorksheet(sheetName) with
+        | true, sheet ->
+            sheet.FirstCell().CurrentRegion
+        | _ -> 
+            $"could not get sheet: {sheetName}" |> failwith
+

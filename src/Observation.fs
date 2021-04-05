@@ -4,7 +4,7 @@
 module Observation =
 
     open Types
-
+    open Informedica.Utils.Lib.BCL
 
     let create name type' length filterFns collapseFn sources =
         {
@@ -36,7 +36,11 @@ module Observation =
 
 
     let signalBelongsToSource (signal : Signal) (source : Source) =
+        // match on id
         if signal.Id.IsSome then signal.Id.Value = source.Id
+        // match on name if source has a name
         else
-            signal.Name.Trim().ToLower() = source.Name.Trim().ToLower()
+            if source.Name |> String.isNullOrWhiteSpace then false
+            else
+                signal.Name.Trim().ToLower() = source.Name.Trim().ToLower()
 

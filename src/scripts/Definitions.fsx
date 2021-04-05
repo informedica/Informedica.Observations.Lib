@@ -25,5 +25,5 @@ File.Exists(path)
 
 let returnNone _ = None
 
-Definitions.read path returnNone returnNone returnNone
+Definitions.readXML path returnNone returnNone returnNone
 |> Seq.toList

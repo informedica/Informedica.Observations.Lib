@@ -1,4 +1,5 @@
 
+
 #load "../Types.fs"
 #load "../Signal.fs"
 #load "../Convert.fs"
@@ -12,11 +13,15 @@ open Informedica.Observations.Lib
 
 module String =
 
+    open System
+
     let split (del : string) (s : string) = s.Split(del) 
 
     let replace (olds : string) (news : string) (s : string) = 
         s.Replace(olds, news)
 
+    let isNullOrWhiteSpace (s : string) = 
+        String.IsNullOrWhiteSpace(s) 
 
 
 module Definitions =
@@ -50,14 +55,13 @@ module Definitions =
         |> File.ReadAllLines
 
 
-    // https://docs.google.com/spreadsheets/d/1ZAk5enAvdkFNv5DD7n5o1tTkAL9MedKNC1YFFdmjL-8/edit?usp=sharing
-    let docId = "1ZAk5enAvdkFNv5DD7n5o1tTkAL9MedKNC1YFFdmjL-8"
 
     let createUrl id sheet = 
         $"https://docs.google.com/spreadsheets/d/{id}/gviz/tq?tqx=out:csv&sheet={sheet}"
 
 
     let download url =
+        printfn "downloading:\n%s" url
         async {
             let req = WebRequest.Create(Uri(url))
             use! resp = req.AsyncGetResponse()
@@ -67,12 +71,21 @@ module Definitions =
         }    
 
 
-    let getSheet sheet = 
+    let parseCSV s =
+        s
+        |> String.split "\n"
+        |> Seq.filter (String.isNullOrWhiteSpace >> not)
+        |> Seq.map (String.replace "\",\"" "||")
+        |> Seq.map (String.replace "\"" "")
+        |> Seq.map (String.split "||")
+
+
+    let getSheet docId sheet = 
         createUrl docId sheet
         |> download
         |> Async.RunSynchronously
-        |> String.split "\n"
-        |> Seq.map (String.split "," >> (Array.map (String.replace "\"" "")))
+        |> parseCSV
+        //|> Seq.map (String.split "\",\"" >> (Array.map (String.replace "\"" "")))
 
 
     let tryCast<'T> (x : string) :  'T =
@@ -104,7 +117,9 @@ module Definitions =
         |> tryCast<'T>
 
 
-    let readGoogle convertMap filterMap collapseMap =
+    let readGoogle docId convertMap filterMap collapseMap =
+        let getSheet = getSheet docId
+
         let msgMap n mapper s =
             s
             |> mapper
@@ -233,15 +248,11 @@ module Definitions =
 module Convert =
 
     open Types
+    open Convert
 
-
-    let setSignalText signal text =
-        { signal with 
-            Value = 
-                if text = "" then NoValue
-                else text |> Text
-        }
     
+    let private setText s t = setSignalText t s 
+
     let servoI : Convert = 
         fun signal -> 
             match signal |> Signal.valueToString with
@@ -257,7 +268,7 @@ module Convert =
             | s when s = "13" -> "PC-CSVniv"
             | s when s = "14" -> "PC-CSVncap"
             | _ -> ""
-            |> setSignalText signal
+            |> setText signal
 
 
     let tempMode : Convert =
@@ -268,7 +279,7 @@ module Convert =
             | Some id when id = 14759 -> "axillary"
             | Some id when id = 8601  -> "skin"
             | _ -> ""
-            |> setSignalText signal
+            |> setText signal
     
 
     let ventMachine : Convert =
@@ -279,7 +290,7 @@ module Convert =
             | Some id when id = 7464  -> "ServoI"
             | Some id when id = 20059 -> "ServoU"
             | _ -> ""
-            |> setSignalText signal
+            |> setText signal
 
 
     let servoU : Convert = 
@@ -297,7 +308,7 @@ module Convert =
             | s when s = "17" -> "PC-CSVniv"
             | s when s = "18" -> "PC-CSVncap"
             | _ -> ""
-            |> setSignalText signal
+            |> setText signal
 
 
     let engstrom : Convert = 
@@ -312,15 +323,15 @@ module Convert =
             | s when s = "n" -> "PC-CMVniv"
             | s when s = "N" -> "PC-CSVncap"
             | _ -> ""
-            |> setSignalText signal
+            |> setText signal
 
 
     let map s =
         match s with
-        | _ when s = "engstrom"    -> engstrom    |> Some
+        | _ when s = "engstrom"     -> engstrom    |> Some
         | _ when s = "servo_i"      -> servoI      |> Some
         | _ when s = "servo_u"      -> servoU      |> Some
-        | _ when s = "carescape"   -> id          |> Some
+        | _ when s = "carescape"    -> id          |> Some
         | _ when s = "vent_machine" -> ventMachine |> Some
         | _ when s = "temp_mode"    -> tempMode    |> Some
         | _ -> None
@@ -377,12 +388,27 @@ module Collapse =
                 |> String.concat ";"
                 |> Text
             |> Some
+        | _ when s = "text_portion" -> (fun _ -> "portion" |> Text) |> Some
+        | _ when s = "text_daily"   -> (fun _ -> "daily"   |> Text) |> Some
         | _ -> None
 
 
 
 
-Definitions.readGoogle Convert.map Filter.map Collapse.map
-|> Seq.toList |> ignore
+// https://docs.google.com/spreadsheets/d/1ZAk5enAvdkFNv5DD7n5o1tTkAL9MedKNC1YFFdmjL-8/edit?usp=sharing
+let docId = "1ZAk5enAvdkFNv5DD7n5o1tTkAL9MedKNC1YFFdmjL-8"
+
+
+Definitions.readGoogle docId Convert.map Filter.map Collapse.map
+|> Seq.toList //|> ignore
 //|> List.filter (fun x -> x.Sources |> List.exists (fun s -> s.Conversions |> List.isEmpty |> not))
 |> List.iter (printfn "%A")
+
+
+"""
+"name","id"
+"komma, name","5"
+"""
+|> Definitions.parseCSV
+
+

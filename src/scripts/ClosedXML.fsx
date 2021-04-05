@@ -10,9 +10,17 @@ Environment.CurrentDirectory <- __SOURCE_DIRECTORY__
 open Informedica.Observations.Lib
 
 
+module Workbook =
+
+    open ClosedXML.Excel
+
+    let getCurrentRegion (sheetName : string) (wb : XLWorkbook) =
+        match wb.TryGetWorksheet(sheetName) with
+        | true, sheet ->
+            sheet.FirstCell().CurrentRegion
+        | _ -> 
+            $"could not get sheet: {sheetName}" |> failwith
+
+
 Workbook.open' "../../data/Definitions.xlsx"
-|> Workbook.getTable "ConvertTable"
-|> fun tbl -> 
-    tbl.Rows()
-    |> Seq.head
-    |> fun r -> r.Cell(1).GetString()
+|> Workbook.getCurrentRegion "Observations"

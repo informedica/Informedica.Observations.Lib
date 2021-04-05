@@ -31,15 +31,11 @@ let returnNone _ = None
 module Convert =
 
     open Types
+    open Convert
 
-
-    let setSignalText signal text =
-        { signal with 
-            Value = 
-                if text = "" then NoValue
-                else text |> Text
-        }
     
+    let private setText s t = setSignalText t s 
+
     let servoI : Convert = 
         fun signal -> 
             match signal |> Signal.valueToString with
@@ -55,7 +51,7 @@ module Convert =
             | s when s = "13" -> "PC-CSVniv"
             | s when s = "14" -> "PC-CSVncap"
             | _ -> ""
-            |> setSignalText signal
+            |> setText signal
 
 
     let tempMode : Convert =
@@ -66,7 +62,7 @@ module Convert =
             | Some id when id = 14759 -> "axillary"
             | Some id when id = 8601  -> "skin"
             | _ -> ""
-            |> setSignalText signal
+            |> setText signal
     
 
     let ventMachine : Convert =
@@ -77,7 +73,7 @@ module Convert =
             | Some id when id = 7464  -> "ServoI"
             | Some id when id = 20059 -> "ServoU"
             | _ -> ""
-            |> setSignalText signal
+            |> setText signal
 
 
     let servoU : Convert = 
@@ -95,7 +91,7 @@ module Convert =
             | s when s = "17" -> "PC-CSVniv"
             | s when s = "18" -> "PC-CSVncap"
             | _ -> ""
-            |> setSignalText signal
+            |> setText signal
 
 
     let engstrom : Convert = 
@@ -110,18 +106,19 @@ module Convert =
             | s when s = "n" -> "PC-CMVniv"
             | s when s = "N" -> "PC-CSVncap"
             | _ -> ""
-            |> setSignalText signal
+            |> setText signal
 
 
     let map s =
         match s with
-        | _ when s = "engstrom"    -> engstrom    |> Some
-        | _ when s = "servoi"      -> servoI      |> Some
-        | _ when s = "servou"      -> servoU      |> Some
-        | _ when s = "carescape"   -> id          |> Some
-        | _ when s = "ventmachine" -> ventMachine |> Some
-        | _ when s = "tempmode"    -> tempMode    |> Some
+        | _ when s = "engstrom"     -> engstrom    |> Some
+        | _ when s = "servo_i"      -> servoI      |> Some
+        | _ when s = "servo_u"      -> servoU      |> Some
+        | _ when s = "carescape"    -> id          |> Some
+        | _ when s = "vent_machine" -> ventMachine |> Some
+        | _ when s = "temp_mode"    -> tempMode    |> Some
         | _ -> None
+
 
 
 module Filter =
@@ -130,6 +127,7 @@ module Filter =
         match s with
         | _ when s = "validated" -> Filter.onlyValid |> Some
         | _ -> None
+
 
 
 module Collapse =
@@ -166,13 +164,15 @@ module Collapse =
 
     let map s : Collapse option =
         match s with
-        | _ when s = "concat(;)" -> 
+        | _ when s = "concat_;" -> 
             fun sgns -> 
                 sgns 
                 |> List.map Signal.valueToString
                 |> String.concat ";"
                 |> Text
             |> Some
+        | _ when s = "text_portion" -> (fun _ -> "portion" |> Text) |> Some
+        | _ when s = "text_daily"   -> (fun _ -> "daily"   |> Text) |> Some
         | _ -> None
 
 
@@ -197,42 +197,45 @@ let createWithId = Signal.createWithIdValidated
 let createNoId = Signal.createNoIdValidated
 
 
-// signals 'raw data'
-[
-    // patient 1
-    createWithId 5373 "gender" ("male" |> Text) "1" none
-    createWithId 5473 "heart rate" (120. |> Numeric) "1" now
-    createWithId 5461 "mean ibp" (60. |> Numeric) "1" now
-    createWithId 5473 "heart rate" (124. |> Numeric) "1" (now |> add 1)
-    // the temperature and the temp mode will be in the output
-    createWithId 5490 "temp rect" (37.8 |> Numeric) "1" (now |> add 1)
-    // this valueWithId will be filtered out
-    createWithId 5473 "heart rate" (600. |> Numeric) "1" (now |> add 2)
-    createWithId 5473 "heart rate" (125. |> Numeric) "1" (now |> add 3)
-    createWithId 7348 "mean airway p" (12. |> Numeric) "1" (now |> add 1)
-    createWithId 7464 "servoI mode" ("21" |> Text) "1" (now |> add 1)
-    // medication that runs over a period signal
-    createNoId "midazolam" ("midazolam 0.1 mg/kg/h" |> Text) "1" (period now (now |> add 5))
-    // patient 2
-    createWithId 5373 "gender" ("female" |> Text) "2" none
-    createWithId 5473 "heart rate" (111. |> Numeric) "2" now
-    // this value will be filtered out
-    createWithId 5461 "mean ibp" (-100. |> Numeric) "2" now
+let signalsList =
+    // signals 'raw data'
+    [
+        createWithId 5373 "patient gender" ("male" |> Text) "1" none // patient gender
+        createWithId 5473 "heart rate" (120. |> Numeric) "1" now
+        createWithId 5461 "mean ibp" (60. |> Numeric) "1" now
+        createWithId 5473 "heart rate" (124. |> Numeric) "1" (now |> add 1)
+        // the temperature and the temp mode will be in the output
+        createWithId 5490 "temp rect" (37.8 |> Numeric) "1" (now |> add 1)
+        // this valueWithId will be filtered out
+        createWithId 5473 "heart rate" (600. |> Numeric) "1" (now |> add 2)
+        createWithId 5473 "heart rate" (125. |> Numeric) "1" (now |> add 3)
+        createWithId 7348 "mean airway p" (12. |> Numeric) "1" (now |> add 1)
+        createWithId 7464 "servoI mode" ("21" |> Text) "1" (now |> add 1)
+        // medication that runs over a period signal
+        createNoId "midazolam" ("midazolam 0.1 mg/kg/h" |> Text) "1" (period now (now |> add 5))
+        // patient 2
+        createWithId 5373 "gender" ("female" |> Text) "2" none
+        createWithId 5473 "heart rate" (111. |> Numeric) "2" now
+        // this value will be filtered out
+        createWithId 5461 "mean ibp" (-100. |> Numeric) "2" now
 
-    createWithId 5473 "heart rate" (103. |> Numeric) "2" (now |> add 1)
-    createWithId 5461 "mean ibp" (100. |> Numeric) "2" (now |> add 1)
-    // diuresis
-    createWithId 6862 "spont diuresis" (12. |> Numeric) "2" now
-    createWithId 6863 "cath diuresis" (15. |> Numeric) "2" now
-    createWithId 16254 "engstrom mode" ("c" |> Text) "2" (now |> add 1)
-    // the below 3 signals with the same date time will be collapsed to an OI
-    createWithId 7348 "mean airway p" (20. |> Numeric) "2" (now |> add 1)
-    createWithId 7345 "fio2" (0.6 |> Numeric) "2" (now |> add 1)
-    createWithId 4100 "po2" (56. |> Numeric) "2" (now |> add 1)
-    // medication signal over a period
-    createNoId "morfine" ("morfine 10 mcg/kg/ur" |> Text) "2" (period now (now |> add 3))
-]
+        createWithId 5473 "heart rate" (103. |> Numeric) "2" (now |> add 1)
+        createWithId 5461 "mean ibp" (100. |> Numeric) "2" (now |> add 1)
+        // diuresis
+        createWithId 6862 "spont diuresis" (12. |> Numeric) "2" now
+        createWithId 6863 "cath diuresis" (15. |> Numeric) "2" now
+        createWithId 16254 "engstrom mode" ("c" |> Text) "2" (now |> add 1)
+        // the below 3 signals with the same date time will be collapsed to an OI
+        createWithId 7348 "mean airway p" (20. |> Numeric) "2" (now |> add 1)
+        createWithId 7345 "fio2" (0.6 |> Numeric) "2" (now |> add 1)
+        createWithId 4100 "po2" (56. |> Numeric) "2" (now |> add 1)
+        // medication signal over a period
+        createNoId "morfine" ("morfine 10 mcg/kg/ur" |> Text) "2" (period now (now |> add 3))
+    ]
+
+
 // process the signals
+signalsList
 |> DataSet.get (Definitions.readXML path Convert.map Filter.map Collapse.map)
 |> DataSet.anonymize
 |> fun (ds, _) ->
@@ -262,3 +265,49 @@ let createNoId = Signal.createNoIdValidated
         |> String.concat "\n"
         |> sprintf "%s\n%s" s
     |> fun s -> File.WriteAllLines("observations.csv", [s]) 
+
+
+
+// https://docs.google.com/spreadsheets/d/1ZAk5enAvdkFNv5DD7n5o1tTkAL9MedKNC1YFFdmjL-8/edit?usp=sharing
+let docId = "1ZAk5enAvdkFNv5DD7n5o1tTkAL9MedKNC1YFFdmjL-8"
+
+
+// signals 'raw data'
+signalsList
+// process the signals
+|> DataSet.get (Definitions.readGoogle docId Convert.map Filter.map Collapse.map)
+|> DataSet.anonymize
+|> fun (ds, _) ->
+    ds.Columns
+    |> List.map (fun c ->
+        $"{c.Name}"
+    )
+    |> String.concat "\t"
+    |> fun s ->
+        ds.Data
+        |> List.map (fun (id, dt, row) ->
+            let row =
+                row
+                |> List.map (fun d ->
+                    let d = 
+                        match d with
+                        | NoValue   -> "null"
+                        | Text s    -> s
+                        | Numeric x -> x |> sprintf "%A"
+                        | DateTime dt -> dt.ToString("dd-MM-yyyy HH:mm")
+
+                    $"{d}"
+                )
+                |> String.concat "\t"
+            $"{id}\t{dt |> DataSet.timeStampToString}\t{row}"
+        )
+        |> String.concat "\n"
+        |> sprintf "%s\n%s" s
+    |> fun s -> File.WriteAllLines("observations.csv", [s]) 
+
+
+
+Definitions.readGoogle docId Convert.map Filter.map Collapse.map
+|> List.map2 (fun (o1 : Observation) o2 ->
+    o1.Name = o2.Name
+) (Definitions.readXML path Convert.map Filter.map Collapse.map)
