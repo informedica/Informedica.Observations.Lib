@@ -32,7 +32,7 @@ module Definitions =
         let convert = "Convert"
 
 
-
+    // TODO: need to apply this in both read functions
     let mapFns mapper xs =
         xs 
         |> List.map (fun s ->
@@ -48,7 +48,7 @@ module Definitions =
         |> List.filter Option.isSome
         |> List.map Option.get
 
-
+    // TODO make one read function
     let readXML path convertMap filterMap collapseMap =
         let getString (cell : IXLCell) = 
             cell.GetString().Trim().ToLower()
@@ -91,6 +91,7 @@ module Definitions =
                             Conversions = 
                                 convertFns
                                 |> List.filter (fun f -> 
+                                    // TODO: need to extract this duplicate logic
                                     f.id = id || (f.id = 0 && f.name = name)
                                 ) 
                                 |> List.map (fun f -> f.convertFn)
@@ -245,7 +246,7 @@ module Definitions =
         | Some i -> sl |> Seq.item i
         |> tryCast<'T>
 
-
+    // TODO: make one read function
     let readGoogle docId convertMap filterMap collapseMap =
         let getSheet = getSheet docId
 
