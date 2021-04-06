@@ -53,7 +53,7 @@ module Definitions =
 
 
 
-    let tryCast<'T> (x : string) :  'T =
+    let tryCast<'T> (x : string) : 'T =
         match x with
         | _ when typeof<'T> = typeof<string> -> x :> obj :?> 'T
         | _ when typeof<'T> = typeof<int> ->
@@ -69,6 +69,11 @@ module Definitions =
         | _ when typeof<'T> = typeof<string option> ->
             if x |> String.isNullOrWhiteSpace then None
             else x |> Some
+            :> obj :?> 'T
+        | _ when typeof<'T> = typeof<DateTime option> ->
+            match DateTime.TryParse(x) with
+            | true, dt -> dt |> Some
+            | _        -> None
             :> obj :?> 'T
         | _ -> 
             $"cannot cast this {typeof<'T>}"
@@ -90,9 +95,9 @@ module Definitions =
         s
         |> String.split "\n"
         |> List.filter (String.isNullOrWhiteSpace >> not)
-        |> List.map (String.replace "\",\"" "||")
+        |> List.map (String.replace "\",\"" "|")
         |> List.map (String.replace "\"" "")
-        |> List.map (String.split "||")
+        |> List.map (String.split "|")
 
 
     let getSheet (wb : XLWorkbook option) (docId : string option) sheet = 
@@ -145,21 +150,15 @@ module Definitions =
                     $"could not find {n} {s}" |> printfn "%s"
                     None
 
-        let obs =
-            let data = getSheet Sheets.observations
-            {|
-                columns = data |> Seq.head
-                rows = data |> Seq.tail
-            |}
-
         let convertFns = 
             let data = getSheet Sheets.convert
-            let columns = data |> Seq.head
+            let columns = data |> List.head
             
             data
-            |> Seq.tail
-            |> Seq.map (fun r ->
+            |> List.tail
+            |> List.map (fun r ->
                 {|
+                    observation = r |> getColumn<string> columns "observation"
                     id = r |> getColumn<string option> columns "source_id"
                     name = r |> getColumn<string> columns "source_name"
                     convertFn = 
@@ -168,31 +167,32 @@ module Definitions =
                         |> msgMap "convert" convertMap
                 |}
             )
-            |> Seq.filter (fun x -> x.convertFn |> Option.isSome)
-            |> Seq.toList
+            |> List.filter (fun x -> x.convertFn |> Option.isSome)
 
         let srcs =
             let data = getSheet Sheets.sources
-            let columns = data |> Seq.head
+            let columns = data |> List.head
             
             data 
-            |> Seq.tail
-            |> Seq.map (fun r ->
+            |> List.tail
+            |> List.map (fun r ->
+                let observation = r |> getColumn<string> columns "observation"
                 let id = r |> getColumn<string option> columns "id"
                 let name = r |> getColumn<string> columns "name"
-                r |> getColumn<string> columns "observation",
+                observation,
                 {
                     Id = id
                     Name = name
                     Conversions = 
                         convertFns
+                        |> List.filter (fun x -> x.observation = observation)
                         |> List.filter (fun x ->
-                            (x.id.IsSome && x.id = id) || x.name = name
+                            (x.id.IsSome && x.id = id) || 
+                            (name |> String.isNullOrWhiteSpace |> not && x.name = name)
                         )
                         |> List.map (fun x -> x.convertFn.Value)
                 }
             )
-            |> Seq.toList
 
         let filters =
             let data = getSheet Sheets.filter
@@ -235,11 +235,11 @@ module Definitions =
         data
         |> Seq.tail        
         |> Seq.map (fun r ->
-            let name = r |> getColumn<string> obs.columns "name"
+            let name = r |> getColumn<string> columns "name"
             {
-                Name = r |> getColumn<string> obs.columns "name"
-                Type = r |> getColumn<string> obs.columns "type"
-                Length = r |> getColumn<int option> obs.columns "length"
+                Name = name
+                Type = r |> getColumn<string> columns "type"
+                Length = r |> getColumn<int option> columns "length"
 
                 Filters = 
                     filters
@@ -262,8 +262,8 @@ module Definitions =
         |> Seq.toList
 
 
-    // TODO: make one read function
     let readGoogle docId = read (Google docId)
+
     let readXML path = read (Excel path)
 
 

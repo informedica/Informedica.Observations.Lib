@@ -6,7 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Include="build\.gitignore" />
+    <EmbeddedResource Remove="build\**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="scripts\Database.fsx" />
     <None Include="scripts\ClosedXML.fsx" />
     <None Include="scripts\Examples.fsx" />

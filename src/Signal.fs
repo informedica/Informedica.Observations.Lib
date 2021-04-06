@@ -183,6 +183,8 @@ module Signal =
         | DateTime dt -> dt.ToString("dd-MM-yyyy HH:mm")
 
 
+    let hasValue (signal : Signal) = signal.Value = NoValue |> not
+
     /// <summary>
     /// Checks whether a signal has a specific datetime
     /// timestamp

@@ -19,6 +19,7 @@
 open System
 open System.IO
 open Informedica.Observations.Lib
+open Informedica.Utils.Lib.BCL
 
 fsi.AddPrinter<DateTime> (fun dt -> dt.ToString("dd-MM-yyyy HH:mm"))
 
@@ -57,10 +58,10 @@ module Convert =
     let tempMode : Convert =
         fun signal -> 
             match signal.Id with
-            | Some id when id = 5490  -> "rectal"
-            | Some id when id = 8025  -> "ear"
-            | Some id when id = 14759 -> "axillary"
-            | Some id when id = 8601  -> "skin"
+            | Some id when id = "5490"  -> "rectal"
+            | Some id when id = "8025"  -> "ear"
+            | Some id when id = "14759" -> "axillary"
+            | Some id when id = "8601"  -> "skin"
             | _ -> ""
             |> setText signal
     
@@ -68,10 +69,10 @@ module Convert =
     let ventMachine : Convert =
         fun signal -> 
             match signal.Id with
-            | Some id when id = 19660 -> "Carescape"
-            | Some id when id = 16254 -> "Engstrom"
-            | Some id when id = 7464  -> "ServoI"
-            | Some id when id = 20059 -> "ServoU"
+            | Some id when id = "19660" -> "Carescape"
+            | Some id when id = "16254" -> "Engstrom"
+            | Some id when id = "7464"  -> "ServoI"
+            | Some id when id = "20059" -> "ServoU"
             | _ -> ""
             |> setText signal
 
@@ -123,9 +124,34 @@ module Convert =
 
 module Filter =
 
+    open Informedica.Utils.Lib.BCL
+
+    let getParams s =
+        "\(([^)]+)\)"
+        |> String.regex
+        |> fun regex -> 
+            regex.Match(s).Value
+            |> String.split ","
+            |> List.filter (String.isNullOrWhiteSpace >> not)
+            
+
     let map s =
         match s with
         | _ when s = "validated" -> Filter.onlyValid |> Some
+        | _ when s |> String.startsWith "min_(" ->
+            match s |> getParams with
+            | [x] -> 
+                x 
+                |> Double.tryParse
+                |> Option.bind (fun x -> Filter.filterGTE x |> Some)
+            | _ -> None
+        | _ when s |> String.startsWith "max_(" ->
+            match s |> getParams with
+            | [x] -> 
+                x 
+                |> Double.tryParse
+                |> Option.bind (fun x -> Filter.filterSTE x |> Some)
+            | _ -> None
         | _ -> None
 
 
@@ -171,68 +197,103 @@ module Collapse =
                 |> String.concat ";"
                 |> Text
             |> Some
-        | _ when s = "text_portion" -> (fun _ -> "portion" |> Text) |> Some
-        | _ when s = "text_daily"   -> (fun _ -> "daily"   |> Text) |> Some
+        | _ when s = "text_portion" -> 
+            fun sgns ->
+                sgns 
+                |> List.exists (Signal.hasValue)
+                |> fun b -> 
+                    if not b then NoValue 
+                    else
+                        "portion" |> Text
+            |> Some
+        | _ when s = "text_daily"   -> 
+            fun sgns ->
+                sgns 
+                |> List.exists (Signal.hasValue)
+                |> fun b -> 
+                    if not b then NoValue 
+                    else
+                        "daily" |> Text
+            |> Some
+
         | _ -> None
 
 
 open Types
 
 
-let none = NoDateTime
-let now = DateTime.Now |> SomeDateTime
-let add n dt =
-    match dt with
-    | SomeDateTime dt -> dt.AddMinutes (n |> float) |> SomeDateTime
-    | _ -> dt
-let period start stop =
-    match start, stop with 
-    | SomeDateTime dt1, SomeDateTime dt2 -> Period (dt1, dt2)
-    | _ -> 
-        $"start and stop should be SomeDateTime not: {start}, {stop}"
-        |> failwith
-
-
-let createWithId = Signal.createWithIdValidated
-let createNoId = Signal.createNoIdValidated
+// https://docs.google.com/spreadsheets/d/1ZAk5enAvdkFNv5DD7n5o1tTkAL9MedKNC1YFFdmjL-8/edit?usp=sharing
+let docId = "1ZAk5enAvdkFNv5DD7n5o1tTkAL9MedKNC1YFFdmjL-8"
 
 
 let signalsList =
     // signals 'raw data'
-    [
-        createWithId 5373 "patient gender" ("male" |> Text) "1" none // patient gender
-        createWithId 5473 "heart rate" (120. |> Numeric) "1" now
-        createWithId 5461 "mean ibp" (60. |> Numeric) "1" now
-        createWithId 5473 "heart rate" (124. |> Numeric) "1" (now |> add 1)
-        // the temperature and the temp mode will be in the output
-        createWithId 5490 "temp rect" (37.8 |> Numeric) "1" (now |> add 1)
-        // this valueWithId will be filtered out
-        createWithId 5473 "heart rate" (600. |> Numeric) "1" (now |> add 2)
-        createWithId 5473 "heart rate" (125. |> Numeric) "1" (now |> add 3)
-        createWithId 7348 "mean airway p" (12. |> Numeric) "1" (now |> add 1)
-        createWithId 7464 "servoI mode" ("21" |> Text) "1" (now |> add 1)
-        // medication that runs over a period signal
-        createNoId "midazolam" ("midazolam 0.1 mg/kg/h" |> Text) "1" (period now (now |> add 5))
-        // patient 2
-        createWithId 5373 "gender" ("female" |> Text) "2" none
-        createWithId 5473 "heart rate" (111. |> Numeric) "2" now
-        // this value will be filtered out
-        createWithId 5461 "mean ibp" (-100. |> Numeric) "2" now
+        // createWithId 5373 "patient gender" ("male" |> Text) "1" none // patient gender
+        // createWithId 5473 "heart rate" (120. |> Numeric) "1" now
+        // createWithId 5461 "mean ibp" (60. |> Numeric) "1" now
+        // createWithId 5473 "heart rate" (124. |> Numeric) "1" (now |> add 1)
+        // // the temperature and the temp mode will be in the output
+        // createWithId 5490 "temp rect" (37.8 |> Numeric) "1" (now |> add 1)
+        // // this valueWithId will be filtered out
+        // createWithId 5473 "heart rate" (600. |> Numeric) "1" (now |> add 2)
+        // createWithId 5473 "heart rate" (125. |> Numeric) "1" (now |> add 3)
+        // createWithId 7348 "mean airway p" (12. |> Numeric) "1" (now |> add 1)
+        // createWithId 7464 "servoI mode" ("21" |> Text) "1" (now |> add 1)
+        // // medication that runs over a period signal
+        // createNoId "midazolam" ("midazolam 0.1 mg/kg/h" |> Text) "1" (period now (now |> add 5))
+        // // patient 2
+        // createWithId 5373 "gender" ("female" |> Text) "2" none
+        // createWithId 5473 "heart rate" (111. |> Numeric) "2" now
+        // // this value will be filtered out
+        // createWithId 5461 "mean ibp" (-100. |> Numeric) "2" now
 
-        createWithId 5473 "heart rate" (103. |> Numeric) "2" (now |> add 1)
-        createWithId 5461 "mean ibp" (100. |> Numeric) "2" (now |> add 1)
-        // diuresis
-        createWithId 6862 "spont diuresis" (12. |> Numeric) "2" now
-        createWithId 6863 "cath diuresis" (15. |> Numeric) "2" now
-        createWithId 16254 "engstrom mode" ("c" |> Text) "2" (now |> add 1)
-        // the below 3 signals with the same date time will be collapsed to an OI
-        createWithId 7348 "mean airway p" (20. |> Numeric) "2" (now |> add 1)
-        createWithId 7345 "fio2" (0.6 |> Numeric) "2" (now |> add 1)
-        createWithId 4100 "po2" (56. |> Numeric) "2" (now |> add 1)
-        // medication signal over a period
-        createNoId "morfine" ("morfine 10 mcg/kg/ur" |> Text) "2" (period now (now |> add 3))
-    ]
-
+        // createWithId 5473 "heart rate" (103. |> Numeric) "2" (now |> add 1)
+        // createWithId 5461 "mean ibp" (100. |> Numeric) "2" (now |> add 1)
+        // // diuresis
+        // createWithId 6862 "spont diuresis" (12. |> Numeric) "2" now
+        // createWithId 6863 "cath diuresis" (15. |> Numeric) "2" now
+        // createWithId 16254 "engstrom mode" ("c" |> Text) "2" (now |> add 1)
+        // // the below 3 signals with the same date time will be collapsed to an OI
+        // createWithId 7348 "mean airway p" (20. |> Numeric) "2" (now |> add 1)
+        // createWithId 7345 "fio2" (0.6 |> Numeric) "2" (now |> add 1)
+        // createWithId 4100 "po2" (56. |> Numeric) "2" (now |> add 1)
+        // // medication signal over a period
+        // createNoId "morfine" ("morfine 10 mcg/kg/ur" |> Text) "2" (period now (now |> add 3))
+    Definitions.getSheet None (docId |> Some) "Signals"
+    |> fun data ->
+        let columns = data |> List.head
+        data
+        |> List.tail
+        |> List.map (fun r ->
+            {
+                Id = r |> Definitions.getColumn columns "id"
+                Name = r |> Definitions.getColumn columns "name"
+                PatientId = r |> Definitions.getColumn columns "patientid"
+                TimeStamp = 
+                    let start = r |> Definitions.getColumn<DateTime option> columns "start"
+                    let stop  = r |> Definitions.getColumn<DateTime option> columns "stop"
+                    match start, stop with
+                    | None, _ -> NoDateTime
+                    | Some dt, None -> dt |> SomeDateTime
+                    | Some dt1, Some dt2 -> (dt1, dt2) |> Period
+                Value = 
+                    let v = r |> Definitions.getColumn columns "value"
+                    match r |> Definitions.getColumn columns "type" with
+                    | s when s = "numeric" -> 
+                        match v |> Double.tryParse with
+                        | Some x -> x |> Numeric
+                        | None   -> NoValue
+                    | s when s = "datetime" -> 
+                        match DateTime.TryParse(v) with
+                        | true, x -> x |> DateTime
+                        | _ -> NoValue
+                    | _ -> 
+                        printfn "setting text value: %s" v
+                        v |> Text
+                Validated = 
+                    r |> Definitions.getColumn columns "validated" = "TRUE"
+            }
+        )
 
 // process the signals
 signalsList
@@ -267,9 +328,6 @@ signalsList
     |> fun s -> File.WriteAllLines("observations.csv", [s]) 
 
 
-
-// https://docs.google.com/spreadsheets/d/1ZAk5enAvdkFNv5DD7n5o1tTkAL9MedKNC1YFFdmjL-8/edit?usp=sharing
-let docId = "1ZAk5enAvdkFNv5DD7n5o1tTkAL9MedKNC1YFFdmjL-8"
 
 
 // signals 'raw data'
@@ -308,6 +366,8 @@ signalsList
 
 
 Definitions.readGoogle docId Convert.map Filter.map Collapse.map
-|> List.map2 (fun (o1 : Observation) o2 ->
-    o1.Name = o2.Name
-) (Definitions.readXML path Convert.map Filter.map Collapse.map)
+|> fun ds -> 
+    ds
+    |> List.filter (fun x ->
+        x.Name |> String.startsWith "mon_temp"
+    )
