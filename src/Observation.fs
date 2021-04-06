@@ -37,7 +37,7 @@ module Observation =
 
     let signalBelongsToSource (signal : Signal) (source : Source) =
         // match on id
-        if signal.Id.IsSome then signal.Id.Value = source.Id
+        if signal.Id.IsSome then signal.Id = source.Id
         // match on name if source has a name
         else
             if source.Name |> String.isNullOrWhiteSpace then false

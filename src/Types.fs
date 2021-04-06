@@ -6,7 +6,7 @@ module Types =
     open System
     
     
-    type SignalId = int option
+    type SignalId = string option
     type PatientId = string
 
 
@@ -25,7 +25,7 @@ module Types =
 
     type Signal = 
         {
-            Id: SignalId
+            Id: string option
             Name : string
             Value : Value
             Validated : bool
@@ -40,6 +40,7 @@ module Types =
 
     type Filter = Signal list -> Signal list
 
+    type SourceId = string option
 
     type Observation =
         { 
@@ -52,7 +53,7 @@ module Types =
         }
     and Source =
         { 
-            Id : int
+            Id : SourceId
             Name : string
             Conversions : Convert list
         }

@@ -9,7 +9,7 @@ module Signal =
     /// <summary>
     /// Create a `Signal`
     /// </summary>
-    /// <param name="id">Optional int id</param>
+    /// <param name="id">Optional string id</param>
     /// <param name="name">Name of the signal</param>
     /// <param name="value">The value of the signal</param>
     /// <param name="valid">Whether the signal is validated</param>
@@ -28,9 +28,9 @@ module Signal =
 
 
     /// <summary>
-    /// Create a `Signal` with an `int` `SignalId`
+    /// Create a `Signal` with an `string` `SignalId`
     /// </summary>
-    /// <param name="id">Optional int id</param>
+    /// <param name="id">Optional string id</param>
     /// <param name="name">Name of the signal</param>
     /// <param name="value">The value of the signal</param>
     /// <param name="valid">Whether the signal is validated</param>
@@ -42,9 +42,9 @@ module Signal =
 
 
     /// <summary>
-    /// Create a `Signal` with an `int` `SignalId`
+    /// Create a `Signal` with an `string` `SignalId`
     /// </summary>
-    /// <param name="id">Optional int id</param>
+    /// <param name="id">Optional string id</param>
     /// <param name="name">Name of the signal</param>
     /// <param name="value">The value of the signal</param>
     /// <param name="patId">The patient id</param>
@@ -82,7 +82,7 @@ module Signal =
     /// <summary>
     /// Create a `Signal` with a `Text` `Value`
     /// </summary>
-    /// <param name="id">Optional int id</param>
+    /// <param name="id">Optional string id</param>
     /// <param name="name">Name of the signal</param>
     /// <param name="value">The value of the signal</param>
     /// <param name="valid">Whether the signal is validated</param>
@@ -97,7 +97,7 @@ module Signal =
     /// <summary>
     /// Create a `Signal` with a `Numeric` `Value`
     /// </summary>
-    /// <param name="id">Optional int id</param>
+    /// <param name="id">Optional string id</param>
     /// <param name="name">Name of the signal</param>
     /// <param name="value">The value of the signal</param>
     /// <param name="valid">Whether the signal is validated</param>
@@ -112,7 +112,7 @@ module Signal =
     /// <summary>
     /// Create a `Signal` with a `DateTime` `Value`
     /// </summary>
-    /// <param name="id">Optional int id</param>
+    /// <param name="id">Optional string id</param>
     /// <param name="name">Name of the signal</param>
     /// <param name="value">The value of the signal</param>
     /// <param name="valid">Whether the signal is validated</param>
@@ -130,7 +130,7 @@ module Signal =
     /// <remarks>
     /// Assumes validate = `true`
     /// </remarks>
-    /// <param name="id">Optional int id</param>
+    /// <param name="id">Optional string id</param>
     /// <param name="name">Name of the signal</param>
     /// <param name="patId">The patient id</param>
     /// <param name="ts">A timestamp of the signal</param>
@@ -142,12 +142,12 @@ module Signal =
     /// <summary>
     /// Check whether a `Signal` has `int` id `i`
     /// </summary>
-    /// <param name="i">The `int` id</param>
+    /// <param name="id">The `string` id</param>
     /// <param name="signal">The `Signal` to check</param>
     /// <returns>`bool`</returns>
-    let hasId i (signal : Signal) =
+    let hasId id (signal : Signal) =
         match signal.Id with
-        | Some id -> id = i
+        | Some x -> id = x
         | None    -> false
 
 
