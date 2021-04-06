@@ -4,6 +4,7 @@
 module DataSet =
 
     open System
+    open System.IO
     open Types
 
 
@@ -116,3 +117,32 @@ module DataSet =
                 }, (pat, id)::ids
 
         ) (ds, [])
+
+
+    let toCSV path (ds : DataSet) =
+        ds.Columns
+        |> List.map (fun c ->
+            $"{c.Name}"
+        )
+        |> String.concat "\t"
+        |> fun s ->
+            ds.Data
+            |> List.map (fun (id, dt, row) ->
+                let row =
+                    row
+                    |> List.map (fun d ->
+                        let d = 
+                            match d with
+                            | NoValue   -> "null"
+                            | Text s    -> s
+                            | Numeric x -> x |> sprintf "%A"
+                            | DateTime dt -> dt.ToString("dd-MM-yyyy HH:mm")
+
+                        $"{d}"
+                    )
+                    |> String.concat "\t"
+                $"{id}\t{dt |> timeStampToString}\t{row}"
+            )
+            |> String.concat "\n"
+            |> sprintf "%s\n%s" s
+        |> fun s -> File.WriteAllLines(path, [s]) 

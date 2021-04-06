@@ -85,7 +85,7 @@ module Definitions =
         |> Seq.tryFindIndex ((=) s)
         |> function
         | None   -> 
-            sprintf "cannot find %s" s
+            $"""cannot find column {s} in {columns |> String.concat ", "}"""
             |> failwith
         | Some i -> sl |> Seq.item i
         |> tryCast<'T>
@@ -110,6 +110,7 @@ module Definitions =
             |> download
             |> Async.RunSynchronously
             |> parseCSV
+
         | Some wb, None ->
             wb
             |> Workbook.getCurrentRegion sheet
@@ -196,11 +197,11 @@ module Definitions =
 
         let filters =
             let data = getSheet Sheets.filter
-            let columns = data |> Seq.head
+            let columns = data |> List.head
 
             data
-            |> Seq.tail
-            |> Seq.map (fun r ->
+            |> List.tail
+            |> List.map (fun r ->
                 {|
                     observation = r |> getColumn<string> columns "observation"
                     filterFn = 
@@ -209,16 +210,15 @@ module Definitions =
                         |> msgMap "filter" filterMap
                 |}
             )
-            |> Seq.filter (fun x -> x.filterFn |> Option.isSome)
-            |> Seq.toList
+            |> List.filter (fun x -> x.filterFn |> Option.isSome)
 
         let collapse =
             let data = getSheet Sheets.collapse
-            let columns = data |> Seq.head
+            let columns = data |> List.head
 
             data
-            |> Seq.tail
-            |> Seq.map (fun r ->
+            |> List.tail
+            |> List.map (fun r ->
                 {|
                     observation = r |> getColumn<string> columns "observation"
                     collapseFn = 
@@ -227,14 +227,13 @@ module Definitions =
                         |> msgMap "collapse" collapseMap
                 |}
             )
-            |> Seq.filter (fun x -> x.collapseFn |> Option.isSome)
-            |> Seq.toList
+            |> List.filter (fun x -> x.collapseFn |> Option.isSome)
 
         let data = getSheet Sheets.observations
-        let columns = data |> Seq.head
+        let columns = data |> List.head
         data
-        |> Seq.tail        
-        |> Seq.map (fun r ->
+        |> List.tail        
+        |> List.map (fun r ->
             let name = r |> getColumn<string> columns "name"
             {
                 Name = name
@@ -259,7 +258,6 @@ module Definitions =
                     | None   -> Collapse.toFirst
             }
         ) 
-        |> Seq.toList
 
 
     let readGoogle docId = read (Google docId)

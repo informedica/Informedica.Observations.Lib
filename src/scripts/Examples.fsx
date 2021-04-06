@@ -133,7 +133,9 @@ module Filter =
             regex.Match(s).Value
             |> String.split ","
             |> List.filter (String.isNullOrWhiteSpace >> not)
-            
+            |> List.map (String.replace "(" "")
+            |> List.map (String.replace ")" "")
+            |> List.collect (String.split ",")
 
     let map s =
         match s with
@@ -295,79 +297,30 @@ let signalsList =
             }
         )
 
-// process the signals
-signalsList
-|> DataSet.get (Definitions.readXML path Convert.map Filter.map Collapse.map)
-|> DataSet.anonymize
-|> fun (ds, _) ->
-    ds.Columns
-    |> List.map (fun c ->
-        $"{c.Name}"
-    )
-    |> String.concat "\t"
-    |> fun s ->
-        ds.Data
-        |> List.map (fun (id, dt, row) ->
-            let row =
-                row
-                |> List.map (fun d ->
-                    let d = 
-                        match d with
-                        | NoValue   -> "null"
-                        | Text s    -> s
-                        | Numeric x -> x |> sprintf "%A"
-                        | DateTime dt -> dt.ToString("dd-MM-yyyy HH:mm")
-
-                    $"{d}"
-                )
-                |> String.concat "\t"
-            $"{id}\t{dt |> DataSet.timeStampToString}\t{row}"
-        )
-        |> String.concat "\n"
-        |> sprintf "%s\n%s" s
-    |> fun s -> File.WriteAllLines("observations.csv", [s]) 
 
 
+let dsToCsv ds =
+    let path = Path.Combine(__SOURCE_DIRECTORY__, "../../data/dataset.csv")
 
-
-// signals 'raw data'
-signalsList
-// process the signals
-|> DataSet.get (Definitions.readGoogle docId Convert.map Filter.map Collapse.map)
-|> DataSet.anonymize
-|> fun (ds, _) ->
-    ds.Columns
-    |> List.map (fun c ->
-        $"{c.Name}"
-    )
-    |> String.concat "\t"
-    |> fun s ->
-        ds.Data
-        |> List.map (fun (id, dt, row) ->
-            let row =
-                row
-                |> List.map (fun d ->
-                    let d = 
-                        match d with
-                        | NoValue   -> "null"
-                        | Text s    -> s
-                        | Numeric x -> x |> sprintf "%A"
-                        | DateTime dt -> dt.ToString("dd-MM-yyyy HH:mm")
-
-                    $"{d}"
-                )
-                |> String.concat "\t"
-            $"{id}\t{dt |> DataSet.timeStampToString}\t{row}"
-        )
-        |> String.concat "\n"
-        |> sprintf "%s\n%s" s
-    |> fun s -> File.WriteAllLines("observations.csv", [s]) 
-
-
-
-Definitions.readGoogle docId Convert.map Filter.map Collapse.map
-|> fun ds -> 
     ds
-    |> List.filter (fun x ->
-        x.Name |> String.startsWith "mon_temp"
-    )
+    |> DataSet.anonymize
+    |> fun (ds, _) -> ds |> DataSet.toCSV path
+
+
+let xmlDs = 
+    // process the signals
+    signalsList
+    |> DataSet.get (Definitions.readXML path Convert.map Filter.map Collapse.map)
+
+
+let onlineDs = 
+    // signals 'raw data'
+    signalsList
+    // process the signals
+    |> DataSet.get (Definitions.readGoogle docId Convert.map Filter.map Collapse.map)
+
+
+onlineDs
+|> dsToCsv
+
+
