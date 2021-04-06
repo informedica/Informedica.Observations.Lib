@@ -82,7 +82,7 @@ module Definitions =
 
     let getColumn<'T> columns s sl =
         columns
-        |> Seq.tryFindIndex ((=) s)
+        |> List.tryFindIndex ((=) s)
         |> function
         | None   -> 
             $"""cannot find column {s} in {columns |> String.concat ", "}"""
