@@ -185,6 +185,16 @@ module Signal =
 
     let hasValue (signal : Signal) = signal.Value = NoValue |> not
 
+
+    let isNumeric (signal : Signal) = 
+        match signal.Value with
+        | Numeric _ -> true
+        | _ -> false 
+
+
+    let isNonNumeric = isNumeric >> not
+
+
     /// <summary>
     /// Checks whether a signal has a specific datetime
     /// timestamp

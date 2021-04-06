@@ -166,7 +166,8 @@ module Collapse =
 
     let sum : Collapse =
         fun signals ->
-            if signals |> List.isEmpty then NoValue
+            if signals |> List.isEmpty || 
+               signals |> List.forall Signal.isNonNumeric then NoValue
             else
                 signals
                 |> List.sumBy (fun signal ->
@@ -193,6 +194,9 @@ module Collapse =
 
     let map s : Collapse option =
         match s with
+        | _ when s = "sum" ->
+            sum
+            |> Some
         | _ when s = "concat_;" -> 
             fun sgns -> 
                 sgns 
