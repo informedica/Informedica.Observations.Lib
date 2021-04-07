@@ -233,31 +233,6 @@ open Types
 let docId = "1ZAk5enAvdkFNv5DD7n5o1tTkAL9MedKNC1YFFdmjL-8"
 
 
-// signals 'raw data'
-// createWithId 5373 "patient gender" ("male" |> Text) "1" none // patient gender
-// createWithId 5473 "heart rate" (120. |> Numeric) "1" now
-// createWithId 5461 "mean ibp" (60. |> Numeric) "1" now
-// createWithId 5473 "heart rate" (124. |> Numeric) "1" (now |> add 1)
-// // the temperature and the temp mode will be in the output
-// createWithId 5490 "temp rect" (37.8 |> Numeric) "1" (now |> add 1)
-// // this valueWithId will be filtered out
-// createWithId 5473 "heart rate" (600. |> Numeric) "1" (now |> add 2)
-// createWithId 5473 "heart rate" (125. |> Numeric) "1" (now |> add 3)
-// createWithId 7348 "mean airway p" (12. |> Numeric) "1" (now |> add 1)
-// createWithId 7464 "servoI mode" ("21" |> Text) "1" (now |> add 1)
-// // medication that runs over a period signal
-// createNoId "midazolam" ("midazolam 0.1 mg/kg/h" |> Text) "1" (period now (now |> add 5))
-// // patient 2
-// createWithId 5373 "gender" ("female" |> Text) "2" none
-// createWithId 5473 "heart rate" (111. |> Numeric) "2" now
-// // this value will be filtered out
-// createWithId 5461 "mean ibp" (-100. |> Numeric) "2" now
-
-// createWithId 5473 "heart rate" (103. |> Numeric) "2" (now |> add 1)
-// createWithId 5461 "mean ibp" (100. |> Numeric) "2" (now |> add 1)
-// // diuresis
-// createWithId 6862 "spont diuresis" (12. |> Numeric) "2" now
-// createWithId 6863 "cath diuresis" (15. |> Numeric) "2" now
 // createWithId 16254 "engstrom mode" ("c" |> Text) "2" (now |> add 1)
 // // the below 3 signals with the same date time will be collapsed to an OI
 // createWithId 7348 "mean airway p" (20. |> Numeric) "2" (now |> add 1)
@@ -353,7 +328,7 @@ onlineDs
         )
 
     {
-        Columns = columns
+        Columns = (ds.Columns |> List.take 2) @ columns
         Data =
             ds.Data
             |> List.fold (fun acc (id, dt, row) ->
@@ -366,7 +341,13 @@ onlineDs
                     |> List.exists (fun c -> c = ds.Columns.[i + 2])
                 )
                 |> List.map snd
-                |> fun r -> [ (id, dt, r)]
+                |> fun row -> [ (id, dt, row)]
                 |> List.append acc
             ) []
     }
+    |> fun ds ->
+        ds.Data
+        |> List.forall (fun (_, _, r) -> 
+            r 
+            |> List.length = ((ds.Columns |> List.length) - 2)
+        )

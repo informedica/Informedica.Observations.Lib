@@ -104,7 +104,10 @@ This equates to a flat regular table with for each patient date time a row of ob
 The following features are implemented or will be implemented:
 
 - [x] Defining observations in an online google spreadsheet
+- [x] Ability to set a time resolution so data can be aggregated over a time period
 - [x] Anonymizing a data set with encrypted patient id's and relative date time points
 - [x] Writing a resulting `DataSet` to a `csv` file  
 - [x] Filter out columns without any values
 - [ ] Writing a resulting `DataSet` to a database
+- [ ] Use automated unit conversion (i.e. mg and gram can be added or kPascal can be converted to mmHg)
+

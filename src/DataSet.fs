@@ -213,7 +213,7 @@ module DataSet =
             )
         // new data set with only data from retained columns
         {
-            Columns = columns
+            Columns = (ds.Columns |> List.take 2) @ columns
             Data =
                 ds.Data
                 |> List.fold (fun acc (id, dt, row) ->
