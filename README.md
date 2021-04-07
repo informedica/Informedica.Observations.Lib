@@ -8,7 +8,7 @@ The theory and background of this library is described in this [blog](https://in
 
 ## Data input
 
-Once data from an electronic patient recored is extracted to `Signals`, these can be processed by this software library. A `Signal` has the following attributes:
+Once data from an electronic patient record is extracted to `Signals`, these can be processed by this software library. A `Signal` has the following attributes:
 
 - Id
 - Name
@@ -21,7 +21,7 @@ Once data from an electronic patient recored is extracted to `Signals`, these ca
 The id of the parameter.
 
 ### Name
-The name of the parameter, for example `lab_creatinie` or `mon_heartrate`. 
+The name of the parameter, for example `lab_creatine` or `mon_heartrate`. 
 
 ### Time Stamp
 The date time or period in which the signal occurs. The timestamp can be empty, meaning that the signal is time independent, for example the gender of a patient.
