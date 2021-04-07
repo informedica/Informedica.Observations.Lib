@@ -21,7 +21,7 @@ module DataSet =
 
 
     let get : Transform =
-        fun observations signals ->
+        fun tr observations signals ->
             let columns =
                 observations
                 |> List.map (fun obs ->
@@ -51,9 +51,55 @@ module DataSet =
                         {|
                             patId = patId
                             dateTime = dt
-                            signals = independent @ dateSignals
+                            independent = independent 
+                            dateSignals = dateSignals
                         |}
                     )
+                |> fun rows ->
+                    match tr with 
+                    | None   -> 
+                        rows
+                        |> List.map (fun r -> 
+                            {|
+                                patId = r.patId
+                                dateTime = r.dateTime
+                                signals = r.independent @ r.dateSignals
+                            |}
+                        )
+                    | Some t -> 
+                        match rows with
+                        | []  -> []
+                        | [_] -> 
+                            let h = rows |> List.head
+                            [
+                                {|
+                                    patId = h.patId
+                                    dateTime = h.dateTime
+                                    signals = h.independent @ h.dateSignals
+                                |}
+                            ]
+                        | _ ->
+                            let first = rows |> List.head
+                            let last  = rows |> List.last
+                            // create a list of offsets
+                            [0 .. t .. (last.dateTime - first.dateTime).TotalMinutes |> int ]
+                            |> List.map (fun x ->
+                                rows 
+                                |> List.filter (fun r -> 
+                                    r.dateTime >= first.dateTime.AddMinutes(x |> float) &&
+                                    r.dateTime <= first.dateTime.AddMinutes(x + t |> float)
+                                )
+                                |> fun filtered ->
+                                    let h = filtered |> List.head
+                                    {|
+                                        patId = h.patId
+                                        dateTime = h.dateTime
+                                        signals = 
+                                            filtered
+                                            |> List.collect (fun f -> f.dateSignals)
+                                            |> List.append h.independent 
+                                    |}
+                            )
             )
             |> List.fold (fun acc x ->
                  { 

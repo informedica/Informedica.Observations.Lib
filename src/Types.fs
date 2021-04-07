@@ -70,7 +70,7 @@ module Types =
     and DataRow = Value list
     and RowTime = | Exact of DateTime | Relative of int 
 
-
-    type Transform = Observation list ->  Signal list -> DataSet
+    type TimeResolution = int option
+    type Transform = TimeResolution -> Observation list ->  Signal list -> DataSet
 
 

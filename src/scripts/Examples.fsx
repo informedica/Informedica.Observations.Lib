@@ -318,14 +318,14 @@ let dsToCsv ds =
 let xmlDs = 
     // process the signals
     signalsList
-    |> DataSet.get (Definitions.readXML path Convert.map Filter.map Collapse.map)
+    |> DataSet.get None (Definitions.readXML path Convert.map Filter.map Collapse.map)
 
 
 let onlineDs = 
     // signals 'raw data'
     signalsList
     // process the signals
-    |> DataSet.get (Definitions.readGoogle docId Convert.map Filter.map Collapse.map)
+    |> DataSet.get (Some 2) (Definitions.readGoogle docId Convert.map Filter.map Collapse.map)
 
 
 onlineDs
