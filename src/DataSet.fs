@@ -192,3 +192,41 @@ module DataSet =
             |> String.concat "\n"
             |> sprintf "%s\n%s" s
         |> fun s -> File.WriteAllLines(path, [s]) 
+
+
+    let removeEmpty ds =
+        let getColumnIndex c =
+            ds.Columns 
+            |> List.findIndex ((=) c)
+            |> fun i -> i - 2
+        // the columns to retain
+        let columns =
+            ds.Columns
+            |> List.skip 2
+            |> List.filter (fun c ->
+                ds.Data
+                |> List.map (fun (_, _, row) ->
+                    row.[c |> getColumnIndex ]
+                )
+                |> List.forall ((=) NoValue)
+                |> not
+            )
+        // new data set with only data from retained columns
+        {
+            Columns = columns
+            Data =
+                ds.Data
+                |> List.fold (fun acc (id, dt, row) ->
+                    row
+                    |> List.mapi (fun i v ->
+                        (i, v)  
+                    )
+                    |> List.filter (fun (i, _) ->
+                        columns 
+                        |> List.exists (fun c -> c = ds.Columns.[i + 2])
+                    )
+                    |> List.map snd
+                    |> fun r -> [ (id, dt, r)]
+                    |> List.append acc
+                ) []
+        }

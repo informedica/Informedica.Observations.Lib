@@ -315,20 +315,58 @@ let dsToCsv ds =
     |> fun (ds, _) -> ds |> DataSet.toCSV path
 
 
-let xmlDs = 
-    // process the signals
-    signalsList
-    |> DataSet.get None (Definitions.readXML path Convert.map Filter.map Collapse.map)
+// let xmlDs = 
+//     // process the signals
+//     signalsList
+//     |> DataSet.get None (Definitions.readXML path Convert.map Filter.map Collapse.map)
 
 
 let onlineDs = 
     // signals 'raw data'
     signalsList
     // process the signals
-    |> DataSet.get (Some 2) (Definitions.readGoogle docId Convert.map Filter.map Collapse.map)
+    |> DataSet.get None (Definitions.readGoogle docId Convert.map Filter.map Collapse.map)
 
 
 onlineDs
+|> DataSet.removeEmpty
 |> dsToCsv
 
 
+onlineDs
+|> fun ds ->
+    let getColumnIndex c =
+        ds.Columns 
+        |> List.findIndex ((=) c)
+        |> fun i -> i - 2
+
+    let columns =
+        ds.Columns
+        |> List.skip 2
+        |> List.filter (fun c ->
+            ds.Data
+            |> List.map (fun (_, _, row) ->
+                row.[c |> getColumnIndex ]
+            )
+            |> List.forall ((=) NoValue)
+            |> not
+        )
+
+    {
+        Columns = columns
+        Data =
+            ds.Data
+            |> List.fold (fun acc (id, dt, row) ->
+                row
+                |> List.mapi (fun i v ->
+                    (i, v)  
+                )
+                |> List.filter (fun (i, _) ->
+                    columns 
+                    |> List.exists (fun c -> c = ds.Columns.[i + 2])
+                )
+                |> List.map snd
+                |> fun r -> [ (id, dt, r)]
+                |> List.append acc
+            ) []
+    }

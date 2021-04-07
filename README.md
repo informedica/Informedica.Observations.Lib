@@ -106,4 +106,5 @@ The following features are implemented or will be implemented:
 - [x] Defining observations in an online google spreadsheet
 - [x] Anonymizing a data set with encrypted patient id's and relative date time points
 - [x] Writing a resulting `DataSet` to a `csv` file  
+- [x] Filter out columns without any values
 - [ ] Writing a resulting `DataSet` to a database
