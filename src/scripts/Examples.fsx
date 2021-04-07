@@ -19,6 +19,7 @@
 
 open System
 open System.IO
+open System.Globalization
 open Informedica.Observations.Lib
 open Informedica.Utils.Lib.BCL
 
@@ -178,12 +179,12 @@ module Collapse =
                 |> Numeric 
 
 
-    let calcOxygenationIndex : Collapse = 
+    let calcOI : Collapse = 
         fun signals ->
             let getNumeric = Option.bind Signal.getNumericValue
-            let fiO2 = signals |> List.tryFind (fun signal -> signal.Name = "fio2") |> getNumeric
-            let map = signals  |> List.tryFind (fun signal -> signal.Name = "mean airway p")  |> getNumeric
-            let pO2 = signals  |> List.tryFind (fun signal -> signal.Name = "po2")  |> getNumeric
+            let fiO2 = signals |> List.tryFind (fun signal -> signal.Id = Some "7345") |> getNumeric
+            let map = signals  |> List.tryFind (fun signal -> signal.Id = Some "7348")  |> getNumeric
+            let pO2 = signals  |> List.tryFind (fun signal -> signal.Id = Some "4100")  |> getNumeric
             match fiO2, map, pO2 with
             | Some fiO2, Some map, Some pO2 -> 
                 ((fiO2 * 100. * map) / pO2)
@@ -197,7 +198,7 @@ module Collapse =
         | _ when s = "sum" ->
             sum
             |> Some
-        | _ when s = "concat_;" -> 
+        | _ when s = "concat_(;)" -> 
             fun sgns -> 
                 sgns 
                 |> List.map Signal.valueToString
@@ -222,6 +223,7 @@ module Collapse =
                     else
                         "daily" |> Text
             |> Some
+        | _ when s = "calc_oi" -> calcOI |> Some
 
         | _ -> None
 
@@ -233,11 +235,6 @@ open Types
 let docId = "1ZAk5enAvdkFNv5DD7n5o1tTkAL9MedKNC1YFFdmjL-8"
 
 
-// createWithId 16254 "engstrom mode" ("c" |> Text) "2" (now |> add 1)
-// // the below 3 signals with the same date time will be collapsed to an OI
-// createWithId 7348 "mean airway p" (20. |> Numeric) "2" (now |> add 1)
-// createWithId 7345 "fio2" (0.6 |> Numeric) "2" (now |> add 1)
-// createWithId 4100 "po2" (56. |> Numeric) "2" (now |> add 1)
 // // medication signal over a period
 // createNoId "morfine" ("morfine 10 mcg/kg/ur" |> Text) "2" (period now (now |> add 3))
 
@@ -262,12 +259,12 @@ let signalsList =
                     | Some dt, None -> dt |> SomeDateTime
                     | Some dt1, Some dt2 -> (dt1, dt2) |> Period
                 Value = 
-                    let v = r |> Definitions.getColumn columns "value"
+                    let v = r |> Definitions.getColumn<string> columns "value"
                     match r |> Definitions.getColumn columns "type" with
                     | s when s = "numeric" -> 
-                        match v |> Double.tryParse with
-                        | Some x -> x |> Numeric
-                        | None   -> NoValue
+                        match Double.TryParse(v, NumberStyles.Any, CultureInfo.InvariantCulture) with
+                        | true, x -> x |> Numeric
+                        | _   -> NoValue
                     | s when s = "datetime" -> 
                         match DateTime.TryParse(v) with
                         | true, x -> x |> DateTime
@@ -307,47 +304,9 @@ onlineDs
 |> DataSet.removeEmpty
 |> dsToCsv
 
+Definitions.readGoogle docId Convert.map Filter.map Collapse.map
+|> List.last
 
-onlineDs
-|> fun ds ->
-    let getColumnIndex c =
-        ds.Columns 
-        |> List.findIndex ((=) c)
-        |> fun i -> i - 2
-
-    let columns =
-        ds.Columns
-        |> List.skip 2
-        |> List.filter (fun c ->
-            ds.Data
-            |> List.map (fun (_, _, row) ->
-                row.[c |> getColumnIndex ]
-            )
-            |> List.forall ((=) NoValue)
-            |> not
-        )
-
-    {
-        Columns = (ds.Columns |> List.take 2) @ columns
-        Data =
-            ds.Data
-            |> List.fold (fun acc (id, dt, row) ->
-                row
-                |> List.mapi (fun i v ->
-                    (i, v)  
-                )
-                |> List.filter (fun (i, _) ->
-                    columns 
-                    |> List.exists (fun c -> c = ds.Columns.[i + 2])
-                )
-                |> List.map snd
-                |> fun row -> [ (id, dt, row)]
-                |> List.append acc
-            ) []
-    }
-    |> fun ds ->
-        ds.Data
-        |> List.forall (fun (_, _, r) -> 
-            r 
-            |> List.length = ((ds.Columns |> List.length) - 2)
-        )
+onlineDs.Columns |> List.last
+onlineDs.Data
+|> List.last

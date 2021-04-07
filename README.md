@@ -4,7 +4,7 @@ This library aims to support the transition of serial patient signals (i.e. data
 to a data set with observations over time for a patient. This data set in turn can be used for further 
 statistical and machine learning purposes.
 
-The theory of this library is described in this [blog](https://informedica.nl/?p=213).
+The theory and background of this library is described in this [blog](https://informedica.nl/?p=213).
 
 ## Data input
 
@@ -108,6 +108,7 @@ The following features are implemented or will be implemented:
 - [x] Anonymizing a data set with encrypted patient id's and relative date time points
 - [x] Writing a resulting `DataSet` to a `csv` file  
 - [x] Filter out columns without any values
+- [ ] Allow parameterized collapse, filter and convert function definitions
 - [ ] Writing a resulting `DataSet` to a database
 - [ ] Use automated unit conversion (i.e. mg and gram can be added or kPascal can be converted to mmHg)
 
