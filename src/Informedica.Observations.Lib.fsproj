@@ -10,9 +10,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="scripts\Database.fsx" />
-    <None Include="scripts\ClosedXML.fsx" />
     <None Include="scripts\Examples.fsx" />
+    <Compile Include="Utils.fs" />
     <Compile Include="Database.fs" />
     <Compile Include="ClosedXML.fs" />
     <Compile Include="Types.fs" />

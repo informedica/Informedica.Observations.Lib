@@ -64,8 +64,9 @@ module Types =
           Data : (PatientId * RowTime * DataRow) list }
     and Column = 
         { 
-            Name: string
-            Type: string
+            Name : string
+            Type : string
+            Length : int option
         }
     and DataRow = Value list
     and RowTime = | Exact of DateTime | Relative of int 

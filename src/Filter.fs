@@ -34,5 +34,5 @@ module Filter =
         |> filterValuePred 
 
 
-
     let filterMinMax (min, max) = filterGTE min >> filterSTE max
+

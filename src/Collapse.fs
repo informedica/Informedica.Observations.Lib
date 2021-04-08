@@ -13,16 +13,36 @@ module Collapse =
             | Some signal -> signal.Value
 
 
-    let sum : Collapse =
+    let calcValue f signals =
+        signals
+        |> List.filter Signal.isNumeric
+        |> function 
+        | [] -> NoValue
+        | xs -> 
+            xs 
+            |> List.map (Signal.getNumericValue >> Option.get)
+            |> f
+            |> Numeric
+
+
+    let sum : Collapse = calcValue List.sum
+
+    let average : Collapse = calcValue List.max
+
+    let max : Collapse = calcValue List.max
+
+    let min : Collapse = calcValue List.min
+
+    let median : Collapse = 
         fun signals ->
-            if signals |> List.isEmpty then NoValue
-            else
-                signals
-                |> List.sumBy (fun signal ->
-                    match signal.Value with
-                    | Numeric x -> x
-                    | _ -> 0.
-                )
-                |> Numeric 
-
-
+            signals
+            |> List.filter Signal.isNumeric
+            |> function 
+            | [] -> NoValue
+            | xs -> 
+                xs 
+                |> List.map (Signal.getNumericValue >> Option.get)
+                |> List.median
+                |> function
+                | None -> NoValue
+                | Some x -> x |> Numeric

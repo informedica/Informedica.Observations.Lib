@@ -207,11 +207,11 @@ module Database =
         }
 
 
-    let listTables (db : Database) =
+    let listTablesConnString connString =
         let cmdText = $"""SELECT TABLE_NAME 
         FROM [{db.Name}].INFORMATION_SCHEMA.TABLES 
         WHERE TABLE_TYPE = 'BASE TABLE'"""
-        use conn = new SqlConnection(db.ConnectionString)
+        use conn = new SqlConnection(connString)
         conn.Open()
         use cmd = new SqlCommand(cmdText, conn)
         use reader = cmd.ExecuteReader()
@@ -223,6 +223,9 @@ module Database =
                 |> read reader
 
         read reader []
+
+
+    let listTables (db : Database) = listTablesConnString db.ConnectionString
 
 
 [<RequireQualifiedAccessAttribute>]
@@ -239,6 +242,7 @@ module Table =
             Type : ColumnType
             IsKey : bool
         }
+
     and ColumnType =
     | VarChar of int
     | VarCharMax
@@ -337,6 +341,12 @@ module Table =
         $"{col.Name} {col.Type |> columnTypeToString} {key}"
 
 
+    let tableExists connString name =
+        connString
+        |> Database.listTablesConnString
+        |> List.exists ((=) name)
+
+
     let createTable connString name columns =
         let pk =
             columns
@@ -357,13 +367,18 @@ module Table =
         |> SqlCommand.executeNonQuery connString
 
 
+    let dropTable connString name =
+        $"DROP TABLE {name}"
+        |> SqlCommand.executeNonQuery connString
+
+
     let bulkInsert headers data tableName db =
         let createDataTable (headers : Column list) data =
             let addData (table : DataTable) =
                 data
                 |> List.fold (fun (tbl : DataTable) row ->
                     //let xs = List.map2 boxColumn headers row
-                    tbl.Rows.Add(data |> List.toArray) |> ignore
+                    tbl.Rows.Add(row |> List.toArray) |> ignore
                     tbl
                 ) table
     

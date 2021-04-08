@@ -5,6 +5,7 @@
 #r "nuget: Informedica.Utils.Lib"
 
 
+#load "../Utils.fs"
 #load "../Database.fs"
 #load "../ClosedXML.fs"
 #load "../Types.fs"
@@ -126,35 +127,25 @@ module Convert =
 
 module Filter =
 
-    open Informedica.Utils.Lib.BCL
-
-    let getParams s =
-        "\(([^)]+)\)"
-        |> String.regex
-        |> fun regex -> 
-            regex.Match(s).Value
-            |> String.split ","
-            |> List.filter (String.isNullOrWhiteSpace >> not)
-            |> List.map (String.replace "(" "")
-            |> List.map (String.replace ")" "")
-            |> List.collect (String.split ",")
+    open Utils
+    open Filter
 
     let map s =
         match s with
-        | _ when s = "validated" -> Filter.onlyValid |> Some
+        | _ when s = "validated" -> onlyValid |> Some
         | _ when s |> String.startsWith "min_(" ->
             match s |> getParams with
             | [x] -> 
                 x 
                 |> Double.tryParse
-                |> Option.bind (fun x -> Filter.filterGTE x |> Some)
+                |> Option.bind (fun x -> filterGTE x |> Some)
             | _ -> None
         | _ when s |> String.startsWith "max_(" ->
             match s |> getParams with
             | [x] -> 
                 x 
                 |> Double.tryParse
-                |> Option.bind (fun x -> Filter.filterSTE x |> Some)
+                |> Option.bind (fun x -> filterSTE x |> Some)
             | _ -> None
         | _ -> None
 
@@ -163,20 +154,7 @@ module Filter =
 module Collapse =
 
     open Types
-
-
-    let sum : Collapse =
-        fun signals ->
-            if signals |> List.isEmpty || 
-               signals |> List.forall Signal.isNonNumeric then NoValue
-            else
-                signals
-                |> List.sumBy (fun signal ->
-                    match signal.Value with
-                    | Numeric x -> x
-                    | _ -> 0.
-                )
-                |> Numeric 
+    open Collapse
 
 
     let calcOI : Collapse = 
@@ -239,7 +217,7 @@ let docId = "1ZAk5enAvdkFNv5DD7n5o1tTkAL9MedKNC1YFFdmjL-8"
 // createNoId "morfine" ("morfine 10 mcg/kg/ur" |> Text) "2" (period now (now |> add 3))
 
 
-let signalsList =
+let signalsList () =
 
     Definitions.getSheet None (docId |> Some) "Signals"
     |> fun data ->
@@ -278,7 +256,6 @@ let signalsList =
         )
 
 
-
 let dsToCsv ds =
     let path = Path.Combine(__SOURCE_DIRECTORY__, "../../data/dataset.csv")
 
@@ -287,26 +264,90 @@ let dsToCsv ds =
     |> fun (ds, _) -> ds |> DataSet.toCSV path
 
 
-// let xmlDs = 
-//     // process the signals
-//     signalsList
-//     |> DataSet.get None (Definitions.readXML path Convert.map Filter.map Collapse.map)
+let xmlDs () = 
+    // process the signals
+    signalsList ()
+    |> DataSet.get None (Definitions.readXML path Convert.map Filter.map Collapse.map)
 
 
-let onlineDs = 
+let getOnlineDs () = 
     // signals 'raw data'
-    signalsList
+    signalsList ()
     // process the signals
     |> DataSet.get None (Definitions.readGoogle docId Convert.map Filter.map Collapse.map)
 
 
-onlineDs
-|> DataSet.removeEmpty
-|> dsToCsv
+// getOnlineDs ()
+// |> DataSet.removeEmpty
+// |> dsToCsv
 
-Definitions.readGoogle docId Convert.map Filter.map Collapse.map
-|> List.last
 
-onlineDs.Columns |> List.last
-onlineDs.Data
-|> List.last
+// xmlDs ()
+// |> DataSet.removeEmpty
+
+
+
+let connBuilder = 
+    Utils.environmentVars().["DB_PICURED"]
+    |> SqlConnectionStringBuilder.tryCreate
+    |> Option.get
+
+
+let db = Database.create connBuilder.DataSource "Test_Temp"
+
+
+let mapColumns (ds : DataSet) =
+    ds.Columns
+    |> List.map (fun c -> 
+        {
+            Table.Name = c.Name
+            Table.Type = 
+                match c.Type with
+                | s when s = "varchar" -> 
+                    c.Length
+                    |> function
+                    | Some n -> n |> Table.VarChar 
+                    | None   -> Table.VarCharMax
+                | s when s = "float"    -> Table.Float
+                | s when s = "datetime" -> Table.DateTime
+                | s when s = "int" -> Table.Int
+                | _ -> 
+                    $"could not map column {c.Type}" 
+                    |> failwith
+            Table.IsKey =
+                c.Name = "pat_id" || c.Name = "pat_timestamp"
+        }
+    )
+
+
+let columns =
+    getOnlineDs ()
+    |> DataSet.removeEmpty
+    |> mapColumns
+
+
+columns
+|> Table.createTable db.ConnectionString "Test"
+
+
+let boxData (ds : DataSet ) =
+    ds.Data
+    |> List.map (fun (id, dt, row) ->
+        [ 
+            id |> box
+            
+            dt 
+            |> function
+            | Exact dt   -> dt |> box
+            | Relative n -> n  |> box
+            
+            yield! row |> List.map Value.boxValue
+        ]
+    )
+
+
+Table.bulkInsert columns (getOnlineDs () |> DataSet.removeEmpty |> boxData) "Test" db
+
+Table.tableExists db.ConnectionString "foo"
+
+Table.dropTable db.ConnectionString "Test"

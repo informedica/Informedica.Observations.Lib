@@ -28,11 +28,12 @@ module DataSet =
                     {
                         Name = obs.Name
                         Type = obs.Type
+                        Length = obs.Length
                     }
                 )
                 |> List.append [
-                    { Name = "pat_id"; Type = "varchar(50)" }
-                    { Name = "pat_timestamp"; Type = "datetime" }
+                    { Name = "pat_id"; Type = "varchar"; Length = Some 50 }
+                    { Name = "pat_timestamp"; Type = "datetime"; Length = None }
                 ]
 
             signals 

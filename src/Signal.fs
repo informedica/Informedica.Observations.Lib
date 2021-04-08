@@ -1,6 +1,18 @@
 ﻿namespace Informedica.Observations.Lib
 
 
+module Value =
+
+    open Types
+
+    let boxValue = function
+        | NoValue     -> null |> box
+        | Text s      -> s |> box
+        | Numeric x   -> x |> box
+        | DateTime dt -> dt |> box
+
+
+
 module Signal =
 
     open Types
