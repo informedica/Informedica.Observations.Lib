@@ -207,9 +207,9 @@ module Database =
         }
 
 
-    let listTablesConnString connString =
+    let listTablesConnString connString dbName =
         let cmdText = $"""SELECT TABLE_NAME 
-        FROM [{db.Name}].INFORMATION_SCHEMA.TABLES 
+        FROM [{dbName}].INFORMATION_SCHEMA.TABLES 
         WHERE TABLE_TYPE = 'BASE TABLE'"""
         use conn = new SqlConnection(connString)
         conn.Open()
@@ -225,7 +225,7 @@ module Database =
         read reader []
 
 
-    let listTables (db : Database) = listTablesConnString db.ConnectionString
+    let listTables (db : Database) = listTablesConnString db.ConnectionString db.Name
 
 
 [<RequireQualifiedAccessAttribute>]
@@ -341,9 +341,9 @@ module Table =
         $"{col.Name} {col.Type |> columnTypeToString} {key}"
 
 
-    let tableExists connString name =
-        connString
-        |> Database.listTablesConnString
+    let tableExists connString dbName name =
+        dbName
+        |> Database.listTablesConnString connString
         |> List.exists ((=) name)
 
 

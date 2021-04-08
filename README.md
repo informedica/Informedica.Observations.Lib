@@ -109,7 +109,7 @@ The following features are implemented or will be implemented:
 - [x] Writing a resulting `DataSet` to a `csv` file  
 - [x] Filter out columns without any values
 - [ ] Allow parameterized collapse, filter and convert function definitions
-- [ ] Writing a resulting `DataSet` to a database
+- [x] Writing a resulting `DataSet` to a database
 - [ ] Use automated unit conversion (i.e. mg and gram can be added or kPascal can be converted to mmHg)
 - [ ] Add handling missing values and interpolation
 

@@ -156,6 +156,13 @@ module DataSet =
                     )
                 {
                     ds with
+                        Columns =
+                            ds.Columns
+                            |> List.map (fun c ->
+                                if c.Name = "pat_timestamp" then
+                                    { c with Type = "int" }
+                                else c
+                            )
                         Data =
                             if ids |> List.isEmpty then data
                             else 
@@ -231,3 +238,63 @@ module DataSet =
                     |> List.append acc
                 ) []
         }
+
+
+    let toDatabase connString dbName tblName (ds : DataSet) =
+        let connBuilder = 
+            connString
+            |> SqlConnectionStringBuilder.tryCreate
+            |> Option.get
+
+        let mapColumns ds =
+            ds.Columns
+            |> List.map (fun c -> 
+                {
+                    Table.Name = c.Name
+                    Table.Type = 
+                        match c.Type with
+                        | s when s = "varchar" -> 
+                            c.Length
+                            |> function
+                            | Some n -> n |> Table.VarChar 
+                            | None   -> Table.VarCharMax
+                        | s when s = "float"    -> Table.Float
+                        | s when s = "datetime" -> Table.DateTime
+                        | s when s = "int" -> Table.Int
+                        | _ -> 
+                            $"could not map column {c.Type}" 
+                            |> failwith
+                    Table.IsKey =
+                        c.Name = "pat_id" || c.Name = "pat_timestamp"
+                }
+            )
+
+        let boxData ds =
+            ds.Data
+            |> List.map (fun (id, dt, row) ->
+                [ 
+                    id |> box
+                    
+                    dt 
+                    |> function
+                    | Exact dt   -> dt |> box
+                    | Relative n -> n  |> box
+                    
+                    yield! row |> List.map Value.boxValue
+                ]
+            )
+
+        let db = Database.create connBuilder.DataSource dbName
+        let columns = ds |> mapColumns
+        
+        if Table.tableExists db.ConnectionString dbName tblName then 
+            Table.dropTable db.ConnectionString tblName |> ignore
+
+        columns
+        |> Table.createTable db.ConnectionString tblName
+        |> function
+        | false -> 
+            $"could not create tabel {tblName} in database {dbName}"
+            |> failwith
+        | true ->
+            Table.bulkInsert columns (ds |> boxData) tblName db

@@ -282,72 +282,16 @@ let getOnlineDs () =
 // |> dsToCsv
 
 
+let connString = Utils.environmentVars().["DB_PICURED"]
+
+getOnlineDs ()
+|> DataSet.removeEmpty
+|> DataSet.anonymize |> fst
+|> DataSet.toDatabase connString "Test_Temp" "Test"
+
+
+Table.tableExists connString "Test_Temp" "Test"
+
 // xmlDs ()
 // |> DataSet.removeEmpty
 
-
-
-let connBuilder = 
-    Utils.environmentVars().["DB_PICURED"]
-    |> SqlConnectionStringBuilder.tryCreate
-    |> Option.get
-
-
-let db = Database.create connBuilder.DataSource "Test_Temp"
-
-
-let mapColumns (ds : DataSet) =
-    ds.Columns
-    |> List.map (fun c -> 
-        {
-            Table.Name = c.Name
-            Table.Type = 
-                match c.Type with
-                | s when s = "varchar" -> 
-                    c.Length
-                    |> function
-                    | Some n -> n |> Table.VarChar 
-                    | None   -> Table.VarCharMax
-                | s when s = "float"    -> Table.Float
-                | s when s = "datetime" -> Table.DateTime
-                | s when s = "int" -> Table.Int
-                | _ -> 
-                    $"could not map column {c.Type}" 
-                    |> failwith
-            Table.IsKey =
-                c.Name = "pat_id" || c.Name = "pat_timestamp"
-        }
-    )
-
-
-let columns =
-    getOnlineDs ()
-    |> DataSet.removeEmpty
-    |> mapColumns
-
-
-columns
-|> Table.createTable db.ConnectionString "Test"
-
-
-let boxData (ds : DataSet ) =
-    ds.Data
-    |> List.map (fun (id, dt, row) ->
-        [ 
-            id |> box
-            
-            dt 
-            |> function
-            | Exact dt   -> dt |> box
-            | Relative n -> n  |> box
-            
-            yield! row |> List.map Value.boxValue
-        ]
-    )
-
-
-Table.bulkInsert columns (getOnlineDs () |> DataSet.removeEmpty |> boxData) "Test" db
-
-Table.tableExists db.ConnectionString "foo"
-
-Table.dropTable db.ConnectionString "Test"
