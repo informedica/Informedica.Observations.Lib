@@ -70,8 +70,7 @@ module DataSet =
                     | Some t -> 
                         match rows with
                         | []  -> []
-                        | [_] -> 
-                            let h = rows |> List.head
+                        | [h] -> 
                             [
                                 {|
                                     patId = h.patId
@@ -84,22 +83,28 @@ module DataSet =
                             let last  = rows |> List.last
                             // create a list of offsets
                             [0 .. t .. (last.dateTime - first.dateTime).TotalMinutes |> int ]
-                            |> List.map (fun x ->
+                            |> List.collect (fun x ->
                                 rows 
                                 |> List.filter (fun r -> 
                                     r.dateTime >= first.dateTime.AddMinutes(x |> float) &&
                                     r.dateTime <= first.dateTime.AddMinutes(x + t |> float)
                                 )
                                 |> fun filtered ->
-                                    let h = filtered |> List.head
-                                    {|
-                                        patId = h.patId
-                                        dateTime = h.dateTime
-                                        signals = 
-                                            filtered
-                                            |> List.collect (fun f -> f.dateSignals)
-                                            |> List.append h.independent 
-                                    |}
+                                    filtered 
+                                    |> List.tryHead
+                                    |> function
+                                    | None -> []
+                                    | Some h ->
+                                        [
+                                            {|
+                                                patId = h.patId
+                                                dateTime = h.dateTime
+                                                signals = 
+                                                    filtered
+                                                    |> List.collect (fun f -> f.dateSignals)
+                                                    |> List.append h.independent 
+                                            |}
+                                        ]
                             )
             )
             |> List.fold (fun acc x ->
