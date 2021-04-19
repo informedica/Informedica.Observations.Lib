@@ -244,8 +244,10 @@ module DataSet =
                 ) []
         }
 
-
-    let toDatabase connString dbName tblName (ds : DataSet) =
+    /// Create a database if this doesn't exist, otherwise just get the database.
+    /// If dropTable and the table exists drop the table and create a new table with the dataset.
+    /// Otherwise use the existing one if this doesn't exist create one.
+    let toDatabase connString dbName tblName dropTable (ds : DataSet) =
         let connBuilder = 
             connString
             |> SqlConnectionStringBuilder.tryCreate
@@ -292,14 +294,28 @@ module DataSet =
         let db = Database.create connBuilder.DataSource dbName
         let columns = ds |> mapColumns
         
-        if Table.tableExists db.ConnectionString dbName tblName then 
+        match Table.tableExists db.ConnectionString dbName tblName, dropTable with 
+        | false, _ ->
+            columns
+            |> Table.createTable db.ConnectionString tblName
+            |> function
+            | false -> 
+                $"could not create tabel {tblName} in database {dbName}"
+                |> failwith
+            | true ->
+                Table.bulkInsert columns (ds |> boxData) tblName db
+
+        | true, true ->
             Table.dropTable db.ConnectionString tblName |> ignore
 
-        columns
-        |> Table.createTable db.ConnectionString tblName
-        |> function
-        | false -> 
-            $"could not create tabel {tblName} in database {dbName}"
-            |> failwith
-        | true ->
+            columns
+            |> Table.createTable db.ConnectionString tblName
+            |> function
+            | false -> 
+                $"could not create tabel {tblName} in database {dbName}"
+                |> failwith
+            | true ->
+                Table.bulkInsert columns (ds |> boxData) tblName db
+                
+        | true, false ->
             Table.bulkInsert columns (ds |> boxData) tblName db
