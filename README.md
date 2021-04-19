@@ -6,6 +6,8 @@ statistical and machine learning purposes.
 
 The theory and background of this library is described in this [blog](https://informedica.nl/?p=213).
 
+The current data definition set that is being used for the UMCU PICU can be found [here](https://docs.google.com/spreadsheets/d/1ZAk5enAvdkFNv5DD7n5o1tTkAL9MedKNC1YFFdmjL-8/edit?usp=sharing).
+
 ## Data input
 
 Once data from an electronic patient record is extracted to `Signals`, these can be processed by this software library. A `Signal` has the following attributes:
@@ -108,7 +110,7 @@ The following features are implemented or will be implemented:
 - [x] Anonymizing a data set with encrypted patient id's and relative date time points
 - [x] Writing a resulting `DataSet` to a `csv` file  
 - [x] Filter out columns without any values
-- [ ] Allow parameterized collapse, filter and convert function definitions
+- [x] Allow parameterized collapse, filter and convert function definitions
 - [x] Writing a resulting `DataSet` to a database
 - [ ] Use automated unit conversion (i.e. mg and gram can be added or kPascal can be converted to mmHg)
 - [ ] Add handling missing values and interpolation
