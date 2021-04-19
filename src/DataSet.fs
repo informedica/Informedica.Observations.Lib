@@ -21,6 +21,7 @@ module DataSet =
 
 
     let get : Transform =
+        printfn "Using new get impl"
         fun tr observations signals ->
             let columns =
                 observations
@@ -81,13 +82,20 @@ module DataSet =
                         | _ ->
                             let first = rows |> List.head
                             let last  = rows |> List.last
+                            let c = 
+                                let n = (last.dateTime - first.dateTime).TotalMinutes |> int
+                                if n % t = 0 then n
+                                else n + t
                             // create a list of offsets
-                            [0 .. t .. (last.dateTime - first.dateTime).TotalMinutes |> int ]
+                            [0 .. t .. c ]
                             |> List.collect (fun x ->
+                                let x = x |> float                                
+                                let start = first.dateTime.AddMinutes(x)
+                                let stop = first.dateTime.AddMinutes(x + (float t))
                                 rows 
                                 |> List.filter (fun r -> 
-                                    r.dateTime >= first.dateTime.AddMinutes(x |> float) &&
-                                    r.dateTime <= first.dateTime.AddMinutes(x + t |> float)
+                                    r.dateTime >= start &&
+                                    r.dateTime < stop
                                 )
                                 |> fun filtered ->
                                     filtered 
@@ -98,7 +106,7 @@ module DataSet =
                                         [
                                             {|
                                                 patId = h.patId
-                                                dateTime = h.dateTime
+                                                dateTime = start
                                                 signals = 
                                                     filtered
                                                     |> List.collect (fun f -> f.dateSignals)

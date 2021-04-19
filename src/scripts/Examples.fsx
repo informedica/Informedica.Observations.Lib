@@ -295,3 +295,8 @@ Table.tableExists connString "Test_Temp" "Test"
 // xmlDs ()
 // |> DataSet.removeEmpty
 
+signalsList()
+|> DataSet.get (Some 4) (Definitions.readGoogle docId Convert.map Filter.map Collapse.map)
+|> fun ds ->
+    ds.Data
+    |> List.map (fun (hn, dt, _) -> hn, dt)
