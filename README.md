@@ -114,4 +114,5 @@ The following features are implemented or will be implemented:
 - [x] Writing a resulting `DataSet` to a database
 - [ ] Use automated unit conversion (i.e. mg and gram can be added or kPascal can be converted to mmHg)
 - [ ] Add handling missing values and interpolation
+- [ ] Use paket for dependencies management
 
