@@ -1,0 +1,10 @@
+source https://api.nuget.org/v3/index.json
+framework: auto-detect
+
+nuget ClosedXML 0.95.4
+nuget Expecto >= 9.0
+nuget FSharp.Core >= 4.0
+nuget Informedica.Utils.Lib 1.0.1
+nuget Microsoft.Data.SqlClient 2.1.2
+nuget Microsoft.NET.Test.Sdk >= 16.0
+nuget YoloDev.Expecto.TestSdk
