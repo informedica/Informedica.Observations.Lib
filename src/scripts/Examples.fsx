@@ -286,8 +286,9 @@ let connString = Utils.environmentVars().["DB_PICURED"]
 
 getOnlineDs ()
 |> DataSet.removeEmpty
-|> DataSet.anonymize |> fst
-|> DataSet.toDatabase connString "Test_Temp" "Test"
+|> DataSet.anonymize 
+|> fst
+|> DataSet.toDatabase connString "Test_Temp" "Test" true
 
 
 Table.tableExists connString "Test_Temp" "Test"
@@ -300,3 +301,9 @@ signalsList()
 |> fun ds ->
     ds.Data
     |> List.map (fun (hn, dt, _) -> hn, dt)
+
+
+signalsList ()
+|> DataSet.get None (Definitions.readGoogle docId Convert.map Filter.map Collapse.map)
+|> DataSet.removeEmpty
+|> dsToCsv

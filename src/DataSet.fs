@@ -21,7 +21,6 @@ module DataSet =
 
 
     let get : Transform =
-        printfn "Using new get impl"
         fun tr observations signals ->
             let columns =
                 observations
@@ -42,21 +41,27 @@ module DataSet =
             |> List.groupBy (fun signal -> signal.PatientId)
             // split date time dependent and independent
             |> List.collect (fun (patId, patSignals) ->
+                // patSignals
+                // |> List.collect Signal.periodToDateTime
+                // |> List.partition Signal.timeStampIsDateTime
+                // |> fun (dependent, independent) ->
+                let notDateTime = 
+                    patSignals
+                    |> List.filter (Signal.timeStampIsDateTime >> not)
                 patSignals
-                |> List.collect Signal.periodToDateTime
-                |> List.partition Signal.dateTimeIsSome
-                |> fun (dependent, independent) ->
-                    dependent
-                    |> List.sortBy Signal.getDateTimeValue
-                    |> List.groupBy Signal.getDateTimeValue
-                    |> List.map (fun (dt, dateSignals) ->
-                        {|
-                            patId = patId
-                            dateTime = dt
-                            independent = independent 
-                            dateSignals = dateSignals
-                        |}
-                    )
+                |> List.filter Signal.timeStampIsDateTime
+                |> List.sortBy Signal.getDateTimeValue
+                |> List.groupBy Signal.getDateTimeValue
+                |> List.map (fun (dt, dateSignals) ->
+                    {|
+                        patId = patId
+                        dateTime = dt
+                        inPeriod = 
+                            patSignals
+                            |> List.filter (Signal.dateTimeInPeriod dt)
+                        dateSignals = dateSignals
+                    |}
+                )
                 |> fun rows ->
                     match tr with 
                     | None   -> 
@@ -65,18 +70,19 @@ module DataSet =
                             {|
                                 patId = r.patId
                                 dateTime = r.dateTime
-                                signals = r.independent @ r.dateSignals
+                                signals = r.inPeriod @ r.dateSignals
                             |}
                         )
                     | Some t -> 
                         match rows with
                         | []  -> []
                         | [h] -> 
+
                             [
                                 {|
                                     patId = h.patId
                                     dateTime = h.dateTime
-                                    signals = h.independent @ h.dateSignals
+                                    signals = h.inPeriod @ h.dateSignals
                                 |}
                             ]
                         | _ ->
@@ -110,7 +116,7 @@ module DataSet =
                                                 signals = 
                                                     filtered
                                                     |> List.collect (fun f -> f.dateSignals)
-                                                    |> List.append h.independent 
+                                                    |> List.append h.inPeriod 
                                             |}
                                         ]
                             )

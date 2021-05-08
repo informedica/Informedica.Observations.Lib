@@ -213,7 +213,7 @@ module Signal =
     /// </summary>
     /// <param name="signal"></param>
     /// <returns>`bool`</returns>
-    let dateTimeIsSome (signal : Signal) =
+    let timeStampIsDateTime (signal : Signal) =
         match signal.TimeStamp with
         | SomeDateTime _ -> true
         | _              -> false
@@ -224,11 +224,21 @@ module Signal =
     /// </summary>
     /// <param name="signal"></param>
     /// <returns>`bool`</returns>
-    let dateTimeIsPeriod (signal : Signal) =
+    let timeStampIsPeriod (signal : Signal) =
         match signal.TimeStamp with
         | Period _ -> true
-        | _              -> false
+        | _        -> false
 
+
+    /// <summary>
+    /// Checks whether a signal has a no timestamp
+    /// </summary>
+    /// <param name="signal"></param>
+    /// <returns>`bool`</returns>
+    let timeStampIsNone (signal : Signal) =
+        match signal.TimeStamp with
+        | NoDateTime _ -> true
+        | _            -> false
 
     /// <summary>
     /// Turns a period signal to a list of 
@@ -264,3 +274,10 @@ module Signal =
         | _ -> 
             $"Cannot get datetime from: {signal}"
             |> failwith
+
+
+    let dateTimeInPeriod dt (signal : Signal) =
+        match signal.TimeStamp with
+        | NoDateTime           -> true
+        | Period (start, stop) -> start <= dt && stop >= dt
+        | SomeDateTime dt1     -> dt1 = dt
