@@ -33,6 +33,9 @@ module Convert =
             { signal with
                 Value = 
                     match signal.Value with
-                    | Text s -> s.Substring(0, l) |> Text
+                    | Text s ->
+                        if s.Length <= l then s
+                        else  s.Substring(0, l) 
+                        |> Text
                     | _ -> signal.Value
             }
