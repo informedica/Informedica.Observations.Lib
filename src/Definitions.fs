@@ -233,11 +233,12 @@ module Definitions =
         data
         |> Array.tail        
         |> Array.map (fun r ->
-            let name = r |> getColumn<string> columns "name"
+            let name   = r |> getColumn<string> columns "name"
+            let length = r |> getColumn<int option> columns "length"
             {
                 Name = name
                 Type = r |> getColumn<string> columns "type"
-                Length = r |> getColumn<int option> columns "length"
+                Length = length
 
                 Filters = 
                     filters
@@ -247,7 +248,14 @@ module Definitions =
                 Sources = 
                     srcs
                     |> Array.filter (fst >> ((=) name))
-                    |> Array.map snd
+                    |> Array.map (fun (_, s) ->
+                        { s with
+                            Conversions = 
+                                match length with
+                                | None   -> s.Conversions
+                                | Some l -> s.Conversions |> Array.append [| (Convert.maxLength l) |]
+                        }
+                    )
 
                 Collapse = 
                     collapse

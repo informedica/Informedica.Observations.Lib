@@ -28,3 +28,11 @@ module Convert =
         }
 
 
+    let maxLength l : Convert =
+        fun signal ->
+            { signal with
+                Value = 
+                    match signal.Value with
+                    | Text s -> s.Substring(0, l) |> Text
+                    | _ -> signal.Value
+            }
