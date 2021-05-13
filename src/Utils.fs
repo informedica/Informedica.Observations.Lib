@@ -19,6 +19,22 @@ module List =
 
 
 
+module Array =
+
+    let median (xs : float []) =
+        match xs with
+        | [||] ->  None
+        | [|x|] -> Some x
+        | _ ->
+            let c = xs |> Array.length
+
+            if c % 2 = 0 then
+                (xs.[(c / 2) - 1] + xs.[(c / 2)]) / 2.
+            else 
+                xs.[(c / 2)]
+            |> Some
+
+
 module Utils =
 
     open System

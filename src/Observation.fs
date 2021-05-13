@@ -27,10 +27,10 @@ module Observation =
 
     let mapToObservations definitions =
         definitions 
-        |> List.map (fun (name, type', length, filters, collapseFn, sources) ->
+        |> Array.map (fun (name, type', length, filters, collapseFn, sources) ->
             let sources =
                 sources 
-                |> List.map (fun (id, name, convertFn) -> createSource id name convertFn)
+                |> Array.map (fun (id, name, convertFn) -> createSource id name convertFn)
             create name type' length filters collapseFn sources
         )
 

@@ -15,8 +15,8 @@ module DataSet =
 
     let empty = 
         { 
-            Columns = []
-            Data = []
+            Columns = [||]
+            Data = [||]
         }
 
 
@@ -24,41 +24,41 @@ module DataSet =
         fun tr observations signals ->
             let columns =
                 observations
-                |> List.map (fun obs ->
+                |> Array.map (fun obs ->
                     {
                         Name = obs.Name
                         Type = obs.Type
                         Length = obs.Length
                     }
                 )
-                |> List.append [
+                |> Array.append [|
                     { Name = "pat_id"; Type = "varchar"; Length = Some 50 }
                     { Name = "pat_timestamp"; Type = "datetime"; Length = None }
-                ]
+                |]
 
             signals 
             // get all signals per patient
-            |> List.groupBy (fun signal -> signal.PatientId)
+            |> Array.groupBy (fun signal -> signal.PatientId)
             // split date time dependent and independent
-            |> List.collect (fun (patId, patSignals) ->
+            |> Array.collect (fun (patId, patSignals) ->
                 // patSignals
-                // |> List.collect Signal.periodToDateTime
-                // |> List.partition Signal.timeStampIsDateTime
+                // |> Array.collect Signal.periodToDateTime
+                // |> Array.partition Signal.timeStampIsDateTime
                 // |> fun (dependent, independent) ->
                 let notDateTime = 
                     patSignals
-                    |> List.filter (Signal.timeStampIsDateTime >> not)
+                    |> Array.filter (Signal.timeStampIsDateTime >> not)
                 patSignals
-                |> List.filter Signal.timeStampIsDateTime
-                |> List.sortBy Signal.getDateTimeValue
-                |> List.groupBy Signal.getDateTimeValue
-                |> List.map (fun (dt, dateSignals) ->
+                |> Array.filter Signal.timeStampIsDateTime
+                |> Array.sortBy Signal.getDateTimeValue
+                |> Array.groupBy Signal.getDateTimeValue
+                |> Array.map (fun (dt, dateSignals) ->
                     {|
                         patId = patId
                         dateTime = dt
                         inPeriod = 
-                            patSignals
-                            |> List.filter (Signal.dateTimeInPeriod dt)
+                            notDateTime
+                            |> Array.filter (Signal.dateTimeInPeriod dt)
                         dateSignals = dateSignals
                     |}
                 )
@@ -66,106 +66,106 @@ module DataSet =
                     match tr with 
                     | None   -> 
                         rows
-                        |> List.map (fun r -> 
+                        |> Array.map (fun r -> 
                             {|
                                 patId = r.patId
                                 dateTime = r.dateTime
-                                signals = r.inPeriod @ r.dateSignals
+                                signals = r.inPeriod |> Array.append r.dateSignals
                             |}
                         )
                     | Some t -> 
                         match rows with
-                        | []  -> []
-                        | [h] -> 
+                        | [||]  -> [||]
+                        | [| h |] -> 
 
-                            [
+                            [|
                                 {|
                                     patId = h.patId
                                     dateTime = h.dateTime
-                                    signals = h.inPeriod @ h.dateSignals
+                                    signals = h.inPeriod |> Array.append h.dateSignals
                                 |}
-                            ]
+                            |]
                         | _ ->
-                            let first = rows |> List.head
-                            let last  = rows |> List.last
+                            let first = rows |> Array.head
+                            let last  = rows |> Array.last
                             let c = 
                                 let n = (last.dateTime - first.dateTime).TotalMinutes |> int
                                 if n % t = 0 then n
                                 else n + t
                             // create a list of offsets
-                            [0 .. t .. c ]
-                            |> List.collect (fun x ->
+                            [| 0 .. t .. c |]
+                            |> Array.collect (fun x ->
                                 let x = x |> float                                
                                 let start = first.dateTime.AddMinutes(x)
                                 let stop = first.dateTime.AddMinutes(x + (float t))
                                 rows 
-                                |> List.filter (fun r -> 
+                                |> Array.filter (fun r -> 
                                     r.dateTime >= start &&
                                     r.dateTime < stop
                                 )
                                 |> fun filtered ->
                                     filtered 
-                                    |> List.tryHead
+                                    |> Array.tryHead
                                     |> function
-                                    | None -> []
+                                    | None -> [||]
                                     | Some h ->
-                                        [
+                                        [|
                                             {|
                                                 patId = h.patId
                                                 dateTime = start
                                                 signals = 
                                                     filtered
-                                                    |> List.collect (fun f -> f.dateSignals)
-                                                    |> List.append h.inPeriod 
+                                                    |> Array.collect (fun f -> f.dateSignals)
+                                                    |> Array.append h.inPeriod 
                                             |}
-                                        ]
+                                        |]
                             )
             )
-            |> List.fold (fun acc x ->
+            |> Array.fold (fun acc x ->
                  { 
                     acc with
-                        Data = [
-                            x.patId, x.dateTime |> Exact, [
+                        Data = [|
+                            x.patId, x.dateTime |> Exact, [|
                                 for obs in observations do
                                     x.signals 
                                     // get all signals that belong to 
                                     // an observation, i.e. is in source list
-                                    |> List.filter (fun signal -> 
+                                    |> Array.filter (fun signal -> 
                                         obs.Sources 
-                                        |> List.exists (Observation.signalBelongsToSource signal)
+                                        |> Array.exists (Observation.signalBelongsToSource signal)
                                     )
                                     // convert the signal value
-                                    |> List.map (fun signal ->
+                                    |> Array.map (fun signal ->
                                         let source = 
                                             obs.Sources 
-                                            |> List.find (Observation.signalBelongsToSource signal)
+                                            |> Array.find (Observation.signalBelongsToSource signal)
                                         
                                         signal 
-                                        |> (source.Conversions |> List.fold (>>) id)
+                                        |> (source.Conversions |> Array.fold (>>) id)
                                     )
-                                    |> (obs.Filters |> List.fold (>>) id)
+                                    |> (obs.Filters |> Array.fold (>>) id)
                                     // collapse to a single value
                                     |> obs.Collapse
-                            ]
-                        ]
+                            |]
+                        |]
                         // add to existing data
-                        |> List.append acc.Data
+                        |> Array.append acc.Data
                  }
             ) { empty with Columns = columns }
 
 
     let anonymize (ds : DataSet) =
         ds.Data
-        |> List.groupBy (fun (pat, _, _) -> pat)
-        |> List.fold (fun (ds, ids) (pat, xs) ->
+        |> Array.groupBy (fun (pat, _, _) -> pat)
+        |> Array.fold (fun (ds, ids) (pat, xs) ->
             let id = Guid.NewGuid().ToString()
             match xs with
-            | [] -> (ds, (pat, id)::ids)
+            | [||] -> (ds, ids |> Array.append [|(pat, id)|])
             | _  ->
-                let (_, fstDate, _) = xs |> List.head 
+                let (_, fstDate, _) = xs |> Array.head 
                 let data = 
                     xs 
-                    |> List.map (fun (_, dt, r) -> 
+                    |> Array.map (fun (_, dt, r) -> 
                         match fstDate, dt with
                         | Relative _, _ 
                         | _, Relative _ -> 
@@ -177,33 +177,33 @@ module DataSet =
                     ds with
                         Columns =
                             ds.Columns
-                            |> List.map (fun c ->
+                            |> Array.map (fun c ->
                                 if c.Name = "pat_timestamp" then
                                     { c with Type = "int" }
                                 else c
                             )
                         Data =
-                            if ids |> List.isEmpty then data
+                            if ids |> Array.isEmpty then data
                             else 
                                 data
-                                |> List.append ds.Data
-                }, (pat, id)::ids
+                                |> Array.append ds.Data
+                }, ids |> Array.append [| (pat, id) |]
 
-        ) (ds, [])
+        ) (ds, [||])
 
 
     let toCSV path (ds : DataSet) =
         ds.Columns
-        |> List.map (fun c ->
+        |> Array.map (fun c ->
             $"{c.Name}"
         )
         |> String.concat "\t"
         |> fun s ->
             ds.Data
-            |> List.map (fun (id, dt, row) ->
+            |> Array.map (fun (id, dt, row) ->
                 let row =
                     row
-                    |> List.map (fun d ->
+                    |> Array.map (fun d ->
                         let d = 
                             match d with
                             | NoValue   -> "null"
@@ -224,38 +224,37 @@ module DataSet =
     let removeEmpty ds =
         let getColumnIndex c =
             ds.Columns 
-            |> List.findIndex ((=) c)
+            |> Array.findIndex ((=) c)
             |> fun i -> i - 2
         // the columns to retain
         let columns =
             ds.Columns
-            |> List.skip 2
-            |> List.filter (fun c ->
+            |> Array.skip 2
+            |> Array.filter (fun c ->
                 ds.Data
-                |> List.map (fun (_, _, row) ->
+                |> Array.map (fun (_, _, row) ->
                     row.[c |> getColumnIndex ]
                 )
-                |> List.forall ((=) NoValue)
+                |> Array.forall ((=) NoValue)
                 |> not
             )
         // new data set with only data from retained columns
         {
-            Columns = (ds.Columns |> List.take 2) @ columns
+            Columns = columns |> Array.append (ds.Columns |> Array.take 2) 
             Data =
                 ds.Data
-                |> List.fold (fun acc (id, dt, row) ->
+                |> Array.fold (fun acc (id, dt, row) ->
                     row
-                    |> List.mapi (fun i v ->
+                    |> Array.mapi (fun i v ->
                         (i, v)  
                     )
-                    |> List.filter (fun (i, _) ->
+                    |> Array.filter (fun (i, _) ->
                         columns 
-                        |> List.exists (fun c -> c = ds.Columns.[i + 2])
+                        |> Array.exists (fun c -> c = ds.Columns.[i + 2])
                     )
-                    |> List.map snd
-                    |> fun r -> [ (id, dt, r)]
-                    |> List.append acc
-                ) []
+                    |> Array.map snd
+                    |> fun r -> [|(id, dt, r) |] |> Array.append acc
+                ) [||]
         }
 
     /// Create a database if this doesn't exist, otherwise just get the database.
@@ -269,7 +268,7 @@ module DataSet =
 
         let mapColumns ds =
             ds.Columns
-            |> List.map (fun c -> 
+            |> Array.map (fun c -> 
                 {
                     Table.Name = c.Name
                     Table.Type = 
@@ -292,8 +291,8 @@ module DataSet =
 
         let boxData ds =
             ds.Data
-            |> List.map (fun (id, dt, row) ->
-                [ 
+            |> Array.map (fun (id, dt, row) ->
+                [| 
                     id |> box
                     
                     dt 
@@ -301,8 +300,8 @@ module DataSet =
                     | Exact dt   -> dt |> box
                     | Relative n -> n  |> box
                     
-                    yield! row |> List.map Value.boxValue
-                ]
+                    yield! row |> Array.map Value.boxValue
+                |]
             )
 
         let db = Database.create connBuilder.DataSource dbName

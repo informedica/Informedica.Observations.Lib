@@ -350,15 +350,15 @@ module Table =
     let createTable connString name columns =
         let pk =
             columns
-            |> List.filter (fun col -> col.IsKey)
+            |> Array.filter (fun col -> col.IsKey)
             |> function
-            | [] -> ""
+            | [||] -> ""
             | cs ->
-                let keys = cs |> List.map (fun c -> c.Name) |> String.concat ", "
+                let keys = cs |> Array.map (fun c -> c.Name) |> String.concat ", "
                 $"CONSTRAINT PK_{name} PRIMARY KEY ({keys})"
         let cols =
             columns
-            |> List.map columnToString
+            |> Array.map columnToString
             |> String.concat ", "
             |> fun s ->
                 if pk = "" then s
@@ -373,18 +373,18 @@ module Table =
 
 
     let bulkInsert headers data tableName db =
-        let createDataTable (headers : Column list) data =
+        let createDataTable (headers : Column []) (data : obj [] []) =
             let addData (table : DataTable) =
                 data
-                |> List.fold (fun (tbl : DataTable) row ->
-                    //let xs = List.map2 boxColumn headers row
-                    tbl.Rows.Add(row |> List.toArray) |> ignore
+                |> Array.fold (fun (tbl : DataTable) row ->
+                    //let xs = Array.map2 boxColumn headers row
+                    tbl.Rows.Add(row) |> ignore
                     tbl
                 ) table
     
             use tbl = new DataTable ()
             headers
-            |> List.fold (fun (tbl: DataTable) h ->
+            |> Array.fold (fun (tbl: DataTable) h ->
                 use col = new DataColumn()
                 col.AllowDBNull <- h.IsKey |> not
                 col.ColumnName <- h.Name

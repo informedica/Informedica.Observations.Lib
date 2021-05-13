@@ -34,11 +34,11 @@ module Types =
         }
 
 
-    type Collapse = Signal list -> Value
+    type Collapse = Signal array -> Value
 
     type Convert = Signal -> Signal
 
-    type Filter = Signal list -> Signal list
+    type Filter = Signal array -> Signal array
 
     type SourceId = string option
 
@@ -47,31 +47,31 @@ module Types =
             Name : string 
             Type : string
             Length : int option
-            Filters : Filter list
+            Filters : Filter array
             Collapse : Collapse 
-            Sources : Source list
+            Sources : Source array
         }
     and Source =
         { 
             Id : SourceId
             Name : string
-            Conversions : Convert list
+            Conversions : Convert array
         }
 
 
     type DataSet =
-        { Columns : Column list
-          Data : (PatientId * RowTime * DataRow) list }
+        { Columns : Column array
+          Data : (PatientId * RowTime * DataRow) array }
     and Column = 
         { 
             Name : string
             Type : string
             Length : int option
         }
-    and DataRow = Value list
+    and DataRow = Value array
     and RowTime = | Exact of DateTime | Relative of int 
 
     type TimeResolution = int option
-    type Transform = TimeResolution -> Observation list ->  Signal list -> DataSet
+    type Transform = TimeResolution -> Observation array ->  Signal array -> DataSet
 
 

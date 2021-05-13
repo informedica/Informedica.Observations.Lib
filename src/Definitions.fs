@@ -82,22 +82,21 @@ module Definitions =
 
     let getColumn<'T> columns s sl =
         columns
-        |> List.tryFindIndex ((=) s)
+        |> Array.tryFindIndex ((=) s)
         |> function
         | None   -> 
             $"""cannot find column {s} in {columns |> String.concat ", "}"""
             |> failwith
-        | Some i -> sl |> Seq.item i
+        | Some i -> sl |> Array.item i
         |> tryCast<'T>
 
 
-    let parseCSV s =
-        s
-        |> String.split "\n"
-        |> List.filter (String.isNullOrWhiteSpace >> not)
-        |> List.map (String.replace "\",\"" "|")
-        |> List.map (String.replace "\"" "")
-        |> List.map (String.split "|")
+    let parseCSV (s : string) =
+        s.Split("\n")
+        |> Array.filter (String.isNullOrWhiteSpace >> not)
+        |> Array.map (String.replace "\",\"" "|")
+        |> Array.map (String.replace "\"" "")
+        |> Array.map (fun s -> s.Split("|"))
 
 
     let getSheet (wb : XLWorkbook option) (docId : string option) sheet = 
@@ -119,9 +118,9 @@ module Definitions =
                 |> Seq.map (fun r ->
                     r.Cells()
                     |> Seq.map getString
-                    |> Seq.toList
+                    |> Seq.toArray
                 )
-                |> Seq.toList
+                |> Seq.toArray
         | Some _, Some _
         | None, None -> 
             "cannot get sheet without a workbook or a docId (or both supplied)" 
@@ -153,11 +152,11 @@ module Definitions =
 
         let convertFns = 
             let data = getSheet Sheets.convert
-            let columns = data |> List.head
+            let columns = data |> Array.head
             
             data
-            |> List.tail
-            |> List.map (fun r ->
+            |> Array.tail
+            |> Array.map (fun r ->
                 {|
                     observation = r |> getColumn<string> columns "observation"
                     id = r |> getColumn<string option> columns "source_id"
@@ -168,15 +167,15 @@ module Definitions =
                         |> msgMap "convert" convertMap
                 |}
             )
-            |> List.filter (fun x -> x.convertFn |> Option.isSome)
+            |> Array.filter (fun x -> x.convertFn |> Option.isSome)
 
         let srcs =
             let data = getSheet Sheets.sources
-            let columns = data |> List.head
+            let columns = data |> Array.head
             
             data 
-            |> List.tail
-            |> List.map (fun r ->
+            |> Array.tail
+            |> Array.map (fun r ->
                 let observation = r |> getColumn<string> columns "observation"
                 let id = r |> getColumn<string option> columns "id"
                 let name = r |> getColumn<string> columns "name"
@@ -186,22 +185,22 @@ module Definitions =
                     Name = name
                     Conversions = 
                         convertFns
-                        |> List.filter (fun x -> x.observation = observation)
-                        |> List.filter (fun x ->
+                        |> Array.filter (fun x -> x.observation = observation)
+                        |> Array.filter (fun x ->
                             (x.id.IsSome && x.id = id) || 
                             (name |> String.isNullOrWhiteSpace |> not && x.name = name)
                         )
-                        |> List.map (fun x -> x.convertFn.Value)
+                        |> Array.map (fun x -> x.convertFn.Value)
                 }
             )
 
         let filters =
             let data = getSheet Sheets.filter
-            let columns = data |> List.head
+            let columns = data |> Array.head
 
             data
-            |> List.tail
-            |> List.map (fun r ->
+            |> Array.tail
+            |> Array.map (fun r ->
                 {|
                     observation = r |> getColumn<string> columns "observation"
                     filterFn = 
@@ -210,15 +209,15 @@ module Definitions =
                         |> msgMap "filter" filterMap
                 |}
             )
-            |> List.filter (fun x -> x.filterFn |> Option.isSome)
+            |> Array.filter (fun x -> x.filterFn |> Option.isSome)
 
         let collapse =
             let data = getSheet Sheets.collapse
-            let columns = data |> List.head
+            let columns = data |> Array.head
 
             data
-            |> List.tail
-            |> List.map (fun r ->
+            |> Array.tail
+            |> Array.map (fun r ->
                 {|
                     observation = r |> getColumn<string> columns "observation"
                     collapseFn = 
@@ -227,13 +226,13 @@ module Definitions =
                         |> msgMap "collapse" collapseMap
                 |}
             )
-            |> List.filter (fun x -> x.collapseFn |> Option.isSome)
+            |> Array.filter (fun x -> x.collapseFn |> Option.isSome)
 
         let data = getSheet Sheets.observations
-        let columns = data |> List.head
+        let columns = data |> Array.head
         data
-        |> List.tail        
-        |> List.map (fun r ->
+        |> Array.tail        
+        |> Array.map (fun r ->
             let name = r |> getColumn<string> columns "name"
             {
                 Name = name
@@ -242,17 +241,17 @@ module Definitions =
 
                 Filters = 
                     filters
-                    |> List.filter (fun x -> x.observation = name)
-                    |> List.map (fun x -> x.filterFn.Value)
+                    |> Array.filter (fun x -> x.observation = name)
+                    |> Array.map (fun x -> x.filterFn.Value)
 
                 Sources = 
                     srcs
-                    |> List.filter (fst >> ((=) name))
-                    |> List.map snd
+                    |> Array.filter (fst >> ((=) name))
+                    |> Array.map snd
 
                 Collapse = 
                     collapse
-                    |> List.tryFind (fun x -> x.observation = name)
+                    |> Array.tryFind (fun x -> x.observation = name)
                     |> function
                     | Some x -> x.collapseFn.Value
                     | None   -> Collapse.toFirst

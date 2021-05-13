@@ -8,41 +8,41 @@ module Collapse =
 
     let toFirst : Collapse =
         fun signals ->
-            match signals |> List.tryHead with
+            match signals |> Array.tryHead with
             | None -> NoValue
             | Some signal -> signal.Value
 
 
     let calcValue f signals =
         signals
-        |> List.filter Signal.isNumeric
+        |> Array.filter Signal.isNumeric
         |> function 
-        | [] -> NoValue
+        | [||] -> NoValue
         | xs -> 
             xs 
-            |> List.map (Signal.getNumericValue >> Option.get)
+            |> Array.map (Signal.getNumericValue >> Option.get)
             |> f
             |> Numeric
 
 
-    let sum : Collapse = calcValue List.sum
+    let sum : Collapse = calcValue Array.sum
 
-    let average : Collapse = calcValue List.max
+    let average : Collapse = calcValue Array.max
 
-    let max : Collapse = calcValue List.max
+    let max : Collapse = calcValue Array.max
 
-    let min : Collapse = calcValue List.min
+    let min : Collapse = calcValue Array.min
 
     let median : Collapse = 
         fun signals ->
             signals
-            |> List.filter Signal.isNumeric
+            |> Array.filter Signal.isNumeric
             |> function 
-            | [] -> NoValue
+            | [||] -> NoValue
             | xs -> 
                 xs 
-                |> List.map (Signal.getNumericValue >> Option.get)
-                |> List.median
+                |> Array.map (Signal.getNumericValue >> Option.get)
+                |> Array.median
                 |> function
                 | None -> NoValue
                 | Some x -> x |> Numeric

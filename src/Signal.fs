@@ -241,22 +241,22 @@ module Signal =
         | _            -> false
 
     /// <summary>
-    /// Turns a period signal to a list of 
+    /// Turns a period signal to an array of 
     /// signals with specific datetime ts in that period
     /// </summary>
     /// <param name="signal"></param>
-    /// <returns>`Signal list`</returns>
+    /// <returns>`Signal array`</returns>
     let periodToDateTime (signal : Signal) =
         match signal.TimeStamp with
         | Period (start, stop) ->
-            [0. .. (stop - start).TotalMinutes ]
-            |> List.map (fun min ->
+            [|0. .. (stop - start).TotalMinutes |]
+            |> Array.map (fun min ->
                 {
                     signal with
                         TimeStamp = start.AddMinutes(min) |> SomeDateTime
                 }
             )
-        | _ -> [ signal ]
+        | _ -> [| signal |]
 
 
     /// <summary>

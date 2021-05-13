@@ -7,11 +7,11 @@ module Filter =
     open Types
 
 
-    let onlyValid : Filter = List.filter Signal.isValid
+    let onlyValid : Filter = Array.filter Signal.isValid
 
 
     let filterValuePred pred : Filter =
-        fun sgns -> sgns |> List.filter pred
+        fun sgns -> sgns |> Array.filter pred
 
 
     let filterGTE n = 
