@@ -154,11 +154,13 @@ module DataSet =
             ) { empty with Columns = columns }
 
 
-    let anonymize (ds : DataSet) =
+    let anonymize guid (ds : DataSet) =
         ds.Data
         |> Array.groupBy (fun (pat, _, _) -> pat)
         |> Array.fold (fun (ds, ids) (pat, xs) ->
-            let id = Guid.NewGuid().ToString()
+            let id = 
+                guid
+                |> Option.defaultValue (Guid.NewGuid().ToString())
             match xs with
             | [||] -> (ds, ids |> Array.append [|(pat, id)|])
             | _  ->
