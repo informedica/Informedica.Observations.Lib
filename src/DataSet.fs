@@ -154,7 +154,7 @@ module DataSet =
             ) { empty with Columns = columns }
 
 
-    let anonymize guid (ds : DataSet) =
+    let anonymize guid startDate (ds : DataSet) =
         ds.Data
         |> Array.groupBy (fun (pat, _, _) -> pat)
         |> Array.fold (fun (ds, ids) (pat, xs) ->
@@ -164,7 +164,14 @@ module DataSet =
             match xs with
             | [||] -> (ds, ids |> Array.append [|(pat, id)|])
             | _  ->
-                let (_, fstDate, _) = xs |> Array.head 
+                let fstDate =
+                    if startDate |> Option.isSome then 
+                        startDate.Value 
+                        |> Exact
+                    else
+                        xs 
+                        |> Array.head 
+                        |> fun (_, fstDate, _) -> fstDate
                 let data = 
                     xs 
                     |> Array.map (fun (_, dt, r) -> 
